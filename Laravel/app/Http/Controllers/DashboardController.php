@@ -25,6 +25,10 @@ class DashboardController extends Controller
             return inertia('dashboard/mahasiswa', $this->dashboardService->forMahasiswa($user));
         }
 
+        if ($user->isDosen()) {
+            return inertia('dashboard/dosen', $this->dashboardService->forDosen($user));
+        }
+
         return inertia('dashboard/admin', $this->dashboardService->adminStats());
     }
 }

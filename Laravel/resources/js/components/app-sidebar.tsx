@@ -13,7 +13,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Building2, CalendarDays, ClipboardList, DoorOpen, FileText, Folder, GraduationCap, KeyIcon, LayoutGrid, Network, ScanFace, User, UserCog, Users } from 'lucide-react';
+import { BookOpen, Building2, CalendarDays, ClipboardList, DoorOpen, FileText, Folder, GraduationCap, KeyIcon, LayoutGrid, Network, ScanFace, ShieldCheck, User, UserCog, Users } from 'lucide-react';
 // BookOpen used in laporan section
 import AppLogo from './app-logo';
 import users from '@/routes/users';
@@ -123,6 +123,27 @@ const keteranganItems: NavItem[] = [
     },
 ];
 
+const dosenItems: NavItem[] = [
+    {
+        title: 'Enrollment Wajah',
+        href: '/enrollment-dosen',
+        icon: ScanFace,
+        permissions: ['enrollment_dosen index'],
+    },
+    {
+        title: 'Koreksi Absensi',
+        href: '/koreksi-dosen',
+        icon: ClipboardList,
+        permissions: ['koreksi_dosen create'],
+    },
+    {
+        title: 'Koreksi Absensi Dosen',
+        href: '/koreksi-dosen/admin',
+        icon: ShieldCheck,
+        permissions: ['koreksi_dosen approve'],
+    },
+];
+
 const laporanItems: NavItem[] = [
     {
         title: 'Laporan Kehadiran',
@@ -160,6 +181,7 @@ export function AppSidebar() {
                 <NavMain section='Master Data' items={masterDataItems} />
                 <NavMain section='Absensi' items={absensiItems} />
                 <NavMain section='Keterangan' items={keteranganItems} />
+                <NavMain section='Dosen' items={dosenItems} />
                 <NavMain section='Laporan' items={laporanItems} />
                 <NavMain section='User Management' items={userManagement} />
             </SidebarContent>

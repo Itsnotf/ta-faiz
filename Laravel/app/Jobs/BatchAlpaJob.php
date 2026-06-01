@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\AbsensiDosen;
 use App\Models\AbsensiMahasiswa;
 use App\Models\SesiAbsensi;
 use Carbon\Carbon;
@@ -44,6 +45,18 @@ class BatchAlpaJob implements ShouldQueue
                     ['sesi_id' => $sesi->id, 'mahasiswa_id' => $mhs->id],
                     ['status' => 'alpa', 'is_locked' => false]
                 );
+            }
+
+            // Alpa dosen — hanya insert jika window dosen juga sudah lewat
+            $jadwal = $sesi->jadwal;
+            if ($jadwal && $jadwal->dosen_id) {
+                $batasDosen = Carbon::parse($sesi->mulai_at)->addMinutes($jadwal->window_dosen_menit);
+                if (now()->isAfter($batasDosen)) {
+                    AbsensiDosen::firstOrCreate(
+                        ['sesi_id' => $sesi->id, 'dosen_id' => $jadwal->dosen_id],
+                        ['status' => 'alpa', 'is_locked' => false]
+                    );
+                }
             }
 
             // Tandai sesi selesai

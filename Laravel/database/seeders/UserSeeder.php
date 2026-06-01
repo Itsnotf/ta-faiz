@@ -38,5 +38,43 @@ class UserSeeder extends Seeder
             ]
         );
         $mahasiswa->assignRole('mahasiswa');
+
+        $dosenUser = User::firstOrCreate(
+            ['email' => 'dosen@demo.id'],
+            [
+                'name'              => 'Dr. Budi Santoso',
+                'password'          => 'Password@123',
+                'email_verified_at' => now(),
+            ]
+        );
+        $dosenUser->assignRole('dosen');
+
+        // Ambil atau buat jurusan demo jika belum ada
+        $jurusan = \App\Models\Jurusan::first();
+        if (!$jurusan) {
+            $institusi = \App\Models\Institusi::firstOrCreate(
+                ['nama' => 'Politeknik Demo'],
+                ['kode' => 'POLI-DEMO', 'alamat' => '-']
+            );
+            $jurusan = \App\Models\Jurusan::firstOrCreate(
+                ['kode' => 'TI-DEMO'],
+                ['institusi_id' => $institusi->id, 'nama' => 'Teknik Informatika']
+            );
+        }
+
+        $dosenRecord = \App\Models\Dosen::firstOrCreate(
+            ['nip' => '198001012010011001'],
+            [
+                'user_id'    => $dosenUser->id,
+                'jurusan_id' => $jurusan->id,
+                'nama'       => 'Dr. Budi Santoso',
+                'email'      => 'dosen@demo.id',
+            ]
+        );
+
+        // Pastikan user_id ter-link jika record sudah ada tapi user_id masih null
+        if (!$dosenRecord->user_id) {
+            $dosenRecord->update(['user_id' => $dosenUser->id]);
+        }
     }
 }

@@ -5,6 +5,8 @@ use App\Http\Controllers\KeteranganController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
+use App\Http\Controllers\EnrollmentDosenController;
+use App\Http\Controllers\KoreksiAbsensiDosenController;
 use App\Http\Controllers\InstitusiController;
 use App\Http\Controllers\JurusanController;
 use App\Http\Controllers\DosenController;
@@ -72,6 +74,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('{mahasiswa}/verify-frame', [EnrollmentController::class, 'verifyFrame'])->name('verify-frame');
         Route::patch('{mahasiswa}/approve', [EnrollmentController::class, 'approve'])->name('approve');
         Route::delete('{mahasiswa}/reset', [EnrollmentController::class, 'reset'])->name('reset');
+    });
+    // Enrollment Dosen (dosen melakukan sendiri)
+    Route::middleware('can:enrollment_dosen index')->prefix('enrollment-dosen')->name('enrollment-dosen.')->group(function () {
+        Route::get('/', [EnrollmentDosenController::class, 'index'])->name('index');
+        Route::post('/upload-foto', [EnrollmentDosenController::class, 'uploadFoto'])->name('upload');
+        Route::get('/verifikasi', [EnrollmentDosenController::class, 'verifikasi'])->name('verifikasi');
+        Route::post('/verify-frame', [EnrollmentDosenController::class, 'verifyFrame'])->name('verify-frame');
+        Route::delete('/reset', [EnrollmentDosenController::class, 'reset'])->name('reset');
+        Route::get('/status', [EnrollmentDosenController::class, 'status'])->name('status');
+    });
+
+    // Koreksi Absensi Dosen (dosen submit)
+    Route::middleware('can:koreksi_dosen create')->prefix('koreksi-dosen')->name('koreksi-dosen.')->group(function () {
+        Route::get('/', [KoreksiAbsensiDosenController::class, 'index'])->name('index');
+        Route::post('/', [KoreksiAbsensiDosenController::class, 'store'])->name('store');
+    });
+
+    // Koreksi Absensi Dosen (admin review)
+    Route::middleware('can:koreksi_dosen approve')->prefix('koreksi-dosen/admin')->name('koreksi-dosen.')->group(function () {
+        Route::get('/', [KoreksiAbsensiDosenController::class, 'adminIndex'])->name('admin');
+        Route::patch('/{koreksi}/approve', [KoreksiAbsensiDosenController::class, 'approve'])->name('approve');
+        Route::patch('/{koreksi}/reject', [KoreksiAbsensiDosenController::class, 'reject'])->name('reject');
+        Route::get('/{koreksi}/bukti', [KoreksiAbsensiDosenController::class, 'bukti'])->name('bukti');
     });
 });
 

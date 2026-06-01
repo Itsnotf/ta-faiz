@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AbsensiDosen;
 use App\Models\AbsensiMahasiswa;
 use App\Models\EnrollmentVerifikasi;
 use App\Models\Jadwal;
@@ -62,6 +63,26 @@ class DashboardService
 
         $hariIniNama = $hariMap[now('Asia/Jakarta')->dayOfWeekIso] ?? null;
 
+        // Jadwal hari ini dengan detail dosen, ruangan, status sesi
+        $jadwalHariIni = $hariIniNama
+            ? Jadwal::where('kelas_id', $mhs->kelas_id)
+                ->where('hari', $hariIniNama)
+                ->where('is_active', true)
+                ->with(['dosen', 'ruangan', 'sesiAbsensi' => fn($q) => $q->whereDate('tanggal', today())])
+                ->get()
+                ->map(function ($j) {
+                    $sesi = $j->sesiAbsensi->first();
+                    return [
+                        'mata_kuliah'  => $j->mata_kuliah,
+                        'dosen'        => $j->dosen->nama ?? '-',
+                        'ruangan'      => $j->ruangan->nama ?? '-',
+                        'jam_mulai'    => substr($j->jam_mulai, 0, 5),
+                        'jam_selesai'  => substr($j->jam_selesai, 0, 5),
+                        'status_sesi'  => $sesi?->status ?? 'belum',
+                    ];
+                })
+            : collect();
+
         // Riwayat terbaru
         $riwayatTerbaru = AbsensiMahasiswa::where('mahasiswa_id', $mhs->id)
             ->with('sesi.jadwal')
@@ -89,6 +110,7 @@ class DashboardService
             'kehadiran_per_matkul' => $kehadiranPerMatkul,
             'warning_matkul'    => $warningMatkul,
             'jadwal_minggu_ini' => $jadwalMingguIni,
+            'jadwal_hari_ini'   => $jadwalHariIni,
             'hari_ini'          => $hariIniNama,
             'riwayat_terbaru'   => $riwayatTerbaru,
             'enrollment_status' => $enrollmentStatus,
@@ -181,6 +203,53 @@ class DashboardService
             'totalMahasiswaAktif', 'rataKehadiran', 'sesiHariIni', 'sesiBerlangsung',
             'enrollmentPct', 'kehadiranPerJurusan', 'enrollmentPerJurusan', 'aktivitasTerbaru'
         );
+    }
+
+    public function forDosen(User $user): array
+    {
+        $dosen = $user->dosen;
+        if (!$dosen) return ['dosen' => null, 'jadwal_hari_ini' => [], 'absensi_stats' => []];
+
+        $hariMap = [0 => 'minggu', 1 => 'senin', 2 => 'selasa', 3 => 'rabu', 4 => 'kamis', 5 => 'jumat', 6 => 'sabtu'];
+        $hariIni = $hariMap[now('Asia/Jakarta')->dayOfWeek];
+
+        $jadwalHariIni = Jadwal::where('dosen_id', $dosen->id)
+            ->where('hari', $hariIni)
+            ->where('is_active', true)
+            ->with(['kelas', 'ruangan', 'sesiAbsensi' => fn($q) => $q->whereDate('tanggal', today())])
+            ->get()
+            ->map(function ($j) use ($dosen) {
+                $sesi = $j->sesiAbsensi->first();
+                $statusHadir = $sesi
+                    ? AbsensiDosen::where('sesi_id', $sesi->id)->where('dosen_id', $dosen->id)->value('status') ?? 'belum'
+                    : 'belum';
+                return [
+                    'id'           => $j->id,
+                    'mata_kuliah'  => $j->mata_kuliah,
+                    'kelas'        => $j->kelas->nama ?? '-',
+                    'ruangan'      => $j->ruangan->nama ?? '-',
+                    'jam_mulai'    => substr($j->jam_mulai, 0, 5),
+                    'jam_selesai'  => substr($j->jam_selesai, 0, 5),
+                    'status_hadir' => $statusHadir,
+                ];
+            });
+
+        $absensiStats = AbsensiDosen::where('dosen_id', $dosen->id)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return [
+            'dosen'           => [
+                'nama'              => $dosen->nama,
+                'nip'               => $dosen->nip,
+                'status_enrollment' => $dosen->status_enrollment,
+            ],
+            'jadwal_hari_ini' => $jadwalHariIni,
+            'absensi_stats'   => $absensiStats,
+        ];
     }
 
     public function forAdminJurusan(User $user): array

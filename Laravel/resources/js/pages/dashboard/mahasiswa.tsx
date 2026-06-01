@@ -10,6 +10,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 interface Matkul  { mata_kuliah: string; hadir: number; total: number; persen: number }
 interface JadwalRow { id: number; mata_kuliah: string; hari: string; jam_mulai: string; jam_selesai: string }
+interface JadwalHariIni { mata_kuliah: string; dosen: string; ruangan: string; jam_mulai: string; jam_selesai: string; status_sesi: string }
 interface AbsensiRow { mata_kuliah: string; tanggal: string; status: string; hadir_at: string | null }
 interface EnrollmentStatus { status_akun: string; jarak_lulus: string[]; semua_jarak_lulus: boolean }
 
@@ -19,6 +20,7 @@ interface Props {
     kehadiran_per_matkul: Matkul[];
     warning_matkul: Matkul[];
     jadwal_minggu_ini: JadwalRow[];
+    jadwal_hari_ini: JadwalHariIni[];
     hari_ini: string | null;
     riwayat_terbaru: AbsensiRow[];
     enrollment_status: EnrollmentStatus;
@@ -59,9 +61,15 @@ function getStepStatus(status_akun: string, jarak_lulus: string[], semua_jarak_l
     ];
 }
 
+const sesiStatusConfig: Record<string, { label: string; className: string }> = {
+    berlangsung: { label: 'Berlangsung', className: 'bg-green-100 text-green-800 border-green-200' },
+    selesai:     { label: 'Selesai',     className: 'bg-gray-100 text-gray-600 border-gray-200' },
+    belum:       { label: 'Belum Mulai', className: 'bg-blue-50 text-blue-700 border-blue-200' },
+};
+
 export default function MahasiswaDashboard({
     mahasiswa, stat, kehadiran_per_matkul, warning_matkul,
-    jadwal_minggu_ini, hari_ini, riwayat_terbaru, enrollment_status,
+    jadwal_minggu_ini, jadwal_hari_ini, hari_ini, riwayat_terbaru, enrollment_status,
 }: Props) {
 
     const { status_akun, jarak_lulus, semua_jarak_lulus } = enrollment_status;
@@ -133,6 +141,40 @@ export default function MahasiswaDashboard({
                 <p className="text-sm text-muted-foreground -mt-2 text-center">
                     Rata-rata kehadiran: <strong>{stat.rata_rata}%</strong>
                 </p>
+
+                {/* Jadwal Hari Ini */}
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Jadwal Hari Ini</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {jadwal_hari_ini.length === 0 ? (
+                            <p className="text-sm text-muted-foreground py-2 text-center">Tidak ada jadwal hari ini.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {jadwal_hari_ini.map((j, i) => {
+                                    const sesiCfg = sesiStatusConfig[j.status_sesi] ?? sesiStatusConfig.belum;
+                                    return (
+                                        <div key={i} className="flex items-center justify-between rounded-lg border border-sidebar-border/60 px-4 py-2.5">
+                                            <div>
+                                                <p className="font-medium text-sm">{j.mata_kuliah}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {j.dosen} · {j.ruangan}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-mono text-sm">{j.jam_mulai} – {j.jam_selesai}</p>
+                                                <Badge variant="outline" className={`text-[10px] mt-0.5 ${sesiCfg.className}`}>
+                                                    {sesiCfg.label}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
                 <div className="grid gap-4 md:grid-cols-2">
 

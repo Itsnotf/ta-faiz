@@ -4,8 +4,8 @@
 ---
 
 ## Status Terakhir
-**Task aktif:** — SEMUA TASK SELESAI (termasuk semua bugfix) —
-**Terakhir diupdate:** 2026-06-01
+**Task aktif:** — SEMUA TASK DOSEN SELESAI —
+**Terakhir diupdate:** 2026-06-02
 
 ---
 
@@ -40,6 +40,24 @@
 | TASK-903 | Dashboard Mahasiswa | ✅ Selesai |
 | TASK-1001 | Rekap kehadiran | ✅ Selesai |
 | TASK-1002 | Export PDF & Excel | ✅ Selesai |
+
+---
+
+## Fitur Dosen (TASK_LIST_Dosen_Feature.md)
+
+| Task | Nama | Status |
+|------|------|--------|
+| DOSEN-001 | Database migrations dosen | ✅ Selesai |
+| DOSEN-002 | Role, permissions, User & Dosen model update | ✅ Selesai |
+| DOSEN-003 | Seeder & DashboardController update | ✅ Selesai |
+| DOSEN-004 | EnrollmentDosenService | ✅ Selesai |
+| DOSEN-005 | EnrollmentDosenController + routes | ✅ Selesai |
+| DOSEN-006 | Enrollment dosen UI | ✅ Selesai |
+| DOSEN-007 | BatchAlpaJob + LockAlpaJob update | ✅ Selesai |
+| DOSEN-008 | KoreksiAbsensiDosen backend | ✅ Selesai |
+| DOSEN-009 | Koreksi absensi UI | ✅ Selesai |
+| DOSEN-010 | Dashboard dosen + update dashboard mahasiswa | ✅ Selesai |
+| DOSEN-011 | npm run build — verifikasi build | ✅ Selesai |
 
 ---
 
@@ -385,7 +403,95 @@ Selama belum jam 23:10, kamera memang harus tetap terbuka.
 
 ---
 
+## Catatan Fitur Dosen (2026-06-02)
+
+### DOSEN-001 ✅ (2026-06-02)
+- 5 migration baru: `add_auth_enrollment_to_dosen`, `create_enrollment_verifikasi_dosen`, `add_window_dosen_menit_to_jadwal`, `add_lock_to_absensi_dosen`, `create_koreksi_absensi_dosen`
+- Kolom baru di `dosen`: user_id FK (nullOnDelete), status_enrollment default pending_upload, foto_paths JSON, foto_verified_at
+- Tabel baru `enrollment_verifikasi_dosen`: unique (dosen_id, jarak)
+- Kolom baru di `jadwal`: window_dosen_menit default 30
+- Kolom baru di `absensi_dosen`: is_locked default false, locked_at nullable
+- Tabel baru `koreksi_absensi_dosen`: bukti_path, catatan, status enum, catatan_admin, disetujui_oleh FK
+- `php artisan migrate` — semua 5 migration DONE ✅
+
+### DOSEN-002 ✅ (2026-06-02)
+- `config/starterkit.php`: tambah role `dosen`, tambah 4 permissions (enrollment_dosen index, absensi_dosen index, koreksi_dosen create, koreksi_dosen approve)
+- `User` model: tambah `dosen()` hasOne + `isDosen()` helper
+- `Dosen` model: update fillable (tambah user_id, foto_paths, status_enrollment, foto_verified_at), casts (foto_paths array, foto_verified_at datetime), relasi baru (user, enrollmentVerifikasi, absensi)
+- Buat `EnrollmentVerifikasiDosen` model: table enrollment_verifikasi_dosen, fillable, cast verified_at datetime, relasi dosen
+- Buat `KoreksiAbsensiDosen` model: table koreksi_absensi_dosen, fillable, relasi absensiDosen/dosen/disetujuiOleh
+- Update `AbsensiDosen` model: tambah is_locked/locked_at ke fillable+casts, tambah relasi `koreksi()` hasMany
+- Update `RoleSeeder`: tambah permission dosen (enrollment_dosen index, absensi_dosen index, koreksi_dosen create), exclude enrollment_dosen index + koreksi_dosen create dari admin_jurusan
+- `php artisan db:seed --class=RoleSeeder` — 4 roles sync ✅
+
+### DOSEN-003 ✅ (2026-06-02)
+- `UserSeeder`: tambah user demo `dosen@demo.id` / Password@123, role dosen, record Dosen dengan NIP 198001012010011001 terhubung ke Jurusan pertama
+- `DashboardController`: tambah routing `isDosen()` → inertia('dashboard/dosen')
+- `DashboardService::forDosen()`: jadwal hari ini (filter dosen_id + hari enum + sesi hari ini), status_hadir per jadwal dari AbsensiDosen, statistik kehadiran bulan ini per status
+- Import `AbsensiDosen` ditambahkan ke DashboardService
+
+---
+
+### DOSEN-004 ✅ (2026-06-02)
+- Buat `app/Services/EnrollmentDosenService.php` — mirip EnrollmentService tapi untuk model Dosen
+- 5 method: uploadFoto (validasi 5 file → POST Python → update face_encodings + status pending_verifikasi), verifyFrame (POST Python → upsert EnrollmentVerifikasiDosen), approve (cek 3 jarak lulus → set aktif), reset (hapus file + EnrollmentVerifikasiDosen → reset ke pending_upload), status (return jarak_lulus + semua_jarak_lulus)
+
+### DOSEN-005 ✅ (2026-06-02)
+- Buat `app/Http/Controllers/EnrollmentDosenController.php` — 6 method (index, uploadFoto, verifikasi, verifyFrame + auto-approve, reset, status)
+- 6 routes dengan prefix `enrollment-dosen` + middleware `can:enrollment_dosen index`
+- `php artisan route:list --path=enrollment-dosen` — 6 routes terdaftar ✅
+
+### DOSEN-006 ✅ (2026-06-02)
+- `resources/js/pages/enrollment-dosen/index.tsx`: tampilkan status enrollment, form upload 5 foto (jika pending_upload), tombol ke halaman verifikasi (jika pending_verifikasi), banner sukses (jika aktif), ConfirmDialog reset
+- `resources/js/pages/enrollment-dosen/verifikasi.tsx`: webcam + verifikasi 3 jarak, auto-approved banner saat semua lulus, endpoint POST /enrollment-dosen/verify-frame
+
+### DOSEN-007 ✅ (2026-06-02)
+- `BatchAlpaJob`: tambah import AbsensiDosen, tambah loop alpa dosen per sesi (cek window_dosen_menit dari mulai_at, `firstOrCreate` alpa dosen)
+- `LockAlpaJob`: tambah lock alpa dosen > 3 hari tanpa koreksi pending/approved (`update is_locked=true, locked_at=now()`)
+
+### DOSEN-008 ✅ (2026-06-02)
+- Buat `app/Http/Controllers/KoreksiAbsensiDosenController.php` — 5 method (index dosen, store dosen, adminIndex, approve, reject, bukti)
+- Guard: cek kepemilikan dosen, cek is_locked, cek duplikat koreksi pending/approved
+- 6 routes: 2 dengan middleware `koreksi_dosen create`, 4 dengan `koreksi_dosen approve`
+
+### DOSEN-009 ✅ (2026-06-02)
+- `resources/js/pages/koreksi-dosen/index.tsx`: tabel absensi dosen, badge alpa terkunci (🔒), tombol "Ajukan Koreksi" hanya jika status alpa + belum terkunci + tidak ada koreksi pending/approved, Dialog form upload bukti + catatan
+- `resources/js/pages/koreksi-dosen/admin.tsx`: tabel pengajuan pending (nama dosen, jurusan, tanggal, matkul), tombol Bukti (buka tab baru), Setujui (dialog + catatan admin opsional), Tolak (dialog + catatan admin wajib)
+
+### DOSEN-010 ✅ (2026-06-02)
+- `resources/js/pages/dashboard/dosen.tsx`: banner enrollment (jika belum aktif), 3 stat card (hadir/alpa/persen), tabel jadwal hari ini (jam, matkul, kelas, ruangan, status_hadir), link ke koreksi absensi
+- `app/Services/DashboardService.php`: tambah `forDosen()` method, update `forMahasiswa()` untuk tambah `jadwal_hari_ini` dengan detail (dosen, ruangan, status_sesi)
+- `resources/js/pages/dashboard/mahasiswa.tsx`: tambah section "Jadwal Hari Ini" di atas chart (tampilkan matkul, dosen, ruangan, jam, badge status sesi)
+- `resources/js/components/app-sidebar.tsx`: tambah section "Dosen" dengan 3 menu (Enrollment Wajah, Koreksi Absensi, Koreksi Absensi Dosen) — permission-gated
+
+### DOSEN-011 ✅ (2026-06-02)
+- `npx shadcn@latest add textarea` — install komponen Textarea yang dipakai koreksi-dosen
+- `npm run build` — 3392 modules transformed, build sukses dalam 46.77s tanpa error TypeScript ✅
+- Chunk baru: dosen-*.js (6.56KB), verifikasi-*.js x2, admin-*.js, mahasiswa-*.js, textarea-*.js
+
+---
+
+---
+
+## Bugfix Sesi 2026-06-02
+
+### FIX-DOSEN-001 ✅ — Dashboard dosen "akun belum terhubung"
+
+**Gejala:** Login `dosen@demo.id` berhasil tapi dashboard menampilkan "Akun dosen belum terhubung. Hubungi administrator."
+
+**Root cause:** `UserSeeder` pertama kali dijalankan saat tabel `jurusan` masih kosong (data jurusan baru diisi manual via CRUD admin). Kondisi `if ($jurusan)` bernilai false → record `Dosen` tidak pernah dibuat → `$user->dosen` selalu null.
+
+**Perbaikan:**
+1. Jalankan `UserSeeder` ulang (kali ini jurusan sudah ada) → record Dosen ID=6 ter-create dengan `user_id=4`
+2. Update `UserSeeder.php` agar lebih robust:
+   - Jika tidak ada jurusan sama sekali, buat `Institusi` + `Jurusan` demo sebagai fallback
+   - Setelah `firstOrCreate`, cek jika `user_id` masih null → update secara eksplisit (menangani kasus record Dosen sudah ada dari CRUD tapi belum ter-link ke User)
+
+**File yang diubah:** `database/seeders/UserSeeder.php`
+
+---
+
 ## Cara Lanjut di Sesi Baru
 1. Baca file ini untuk tahu posisi progress
-2. Lanjut ke task pertama yang statusnya ⏳ Pending
-3. Task list lengkap ada di: `TASK_LIST_Sistem_Absensi.md`
+2. Semua task sudah selesai — sistem absensi dosen lengkap
+3. Untuk testing: login `dosen@demo.id` / `Password@123` → dashboard dosen → enrollment wajah

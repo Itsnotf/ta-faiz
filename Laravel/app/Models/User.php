@@ -69,6 +69,11 @@ class User extends Authenticatable
         return $this->hasOne(Mahasiswa::class);
     }
 
+    public function dosen(): HasOne
+    {
+        return $this->hasOne(Dosen::class);
+    }
+
     public function isSuperAdmin(): bool
     {
         return $this->hasRole('super_admin');
@@ -82,5 +87,10 @@ class User extends Authenticatable
     public function isMahasiswa(): bool
     {
         return $this->hasRole('mahasiswa');
+    }
+
+    public function isDosen(): bool
+    {
+        return $this->hasRole('dosen');
     }
 }

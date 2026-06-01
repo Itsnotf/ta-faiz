@@ -4,7 +4,7 @@ return [
 
     'pagination' => 10,
 
-    'roles' => ['super_admin', 'admin_jurusan', 'mahasiswa'],
+    'roles' => ['super_admin', 'admin_jurusan', 'mahasiswa', 'dosen'],
 
     'default_admin_role' => 'super_admin',
 
@@ -24,6 +24,10 @@ return [
         'keterangan index','keterangan create','keterangan approve',
         'enrollment index',
         'laporan index','laporan export',
+        'enrollment_dosen index',
+        'absensi_dosen index',
+        'koreksi_dosen create',
+        'koreksi_dosen approve',
     ],
 
 ];
