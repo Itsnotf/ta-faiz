@@ -76,7 +76,7 @@ class InternalController extends Controller
         foreach ($jadwalAktif as $jadwal) {
             // Mahasiswa dari kelas jadwal
             foreach ($jadwal->kelas->mahasiswa ?? [] as $mhs) {
-                if ($mhs->face_encodings && !$mahasiswaList->contains('id', $mhs->id)) {
+                if ($mhs->face_encodings && $mhs->status_akun === 'aktif' && !$mahasiswaList->contains('id', $mhs->id)) {
                     $mahasiswaList->push([
                         'id'        => $mhs->id,
                         'nim'       => $mhs->nim,
@@ -134,6 +134,11 @@ class InternalController extends Controller
         if ($request->type === 'mahasiswa') {
             $mhs = Mahasiswa::where('nim', $request->nim_or_nip)->first();
             if (!$mhs) return response()->json(['status' => 'not_found'], 404);
+
+            // Verifikasi mahasiswa terdaftar di kelas yang sesuai dengan sesi ini
+            if ($mhs->kelas_id !== $sesi->jadwal->kelas_id) {
+                return response()->json(['status' => 'not_in_class'], 403);
+            }
 
             // Cek duplikat
             $exists = AbsensiMahasiswa::where('sesi_id', $sesi->id)

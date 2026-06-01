@@ -7,8 +7,9 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Kelas, type Mahasiswa } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { CheckCircle, RotateCcw, Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 
 type MahasiswaWithCount = Mahasiswa & { enrollment_verifikasi_count: number };
 
@@ -16,6 +17,7 @@ interface Props {
     mahasiswa: { data: MahasiswaWithCount[]; links: any[] };
     kelas: Kelas[];
     filters: { kelas_id?: string };
+    flash?: { success?: string; error?: string };
 }
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Enrollment', href: '/enrollment' }];
@@ -27,20 +29,26 @@ const statusConfig = {
     aktif:              { label: 'Aktif',            className: 'bg-green-100 text-green-800 border-green-200' },
 } as const;
 
-export default function EnrollmentIndex({ mahasiswa, kelas, filters }: Props) {
+export default function EnrollmentIndex({ mahasiswa, kelas, filters, flash }: Props) {
     const [uploadTarget, setUploadTarget] = useState<Mahasiswa | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const uploadForm = useForm<{ foto: File[] }>({ foto: [] });
+    const [shownMessages] = useState(new Set<string>());
+
+    useEffect(() => {
+        if (flash?.success && !shownMessages.has(flash.success)) {
+            toast.success(flash.success);
+            shownMessages.add(flash.success);
+        }
+        if (flash?.error && !shownMessages.has(flash.error)) {
+            toast.error(flash.error);
+            shownMessages.add(flash.error);
+        }
+    }, [flash?.success, flash?.error]);
 
     function handleKelasFilter(val: string) {
         const params = val && val !== 'all' ? { kelas_id: val } : {};
         router.get('/enrollment', params, { preserveState: true });
-    }
-
-    function handleReset(mahasiswaId: number) {
-        if (confirm('Reset enrollment mahasiswa ini? Semua foto dan encoding akan dihapus.')) {
-            router.delete(`/enrollment/${mahasiswaId}/reset`);
-        }
     }
 
     function handleUploadSubmit(e: React.FormEvent) {
@@ -144,11 +152,18 @@ export default function EnrollmentIndex({ mahasiswa, kelas, filters }: Props) {
                                                 </Button>
                                             )}
                                             {(mhs.status_akun === 'pending_verifikasi' || mhs.status_akun === 'aktif') && (
-                                                <Button size="sm" variant="outline"
-                                                    className="hover:bg-red-50 hover:text-red-600"
-                                                    onClick={() => handleReset(mhs.id)}>
-                                                    <RotateCcw className="size-3.5 mr-1" /> Reset
-                                                </Button>
+                                                <ConfirmDialog
+                                                    title="Reset Enrollment?"
+                                                    description="Semua foto dan encoding wajah mahasiswa ini akan dihapus. Mahasiswa harus mengulang proses enrollment dari awal."
+                                                    confirmLabel="Ya, Reset"
+                                                    onConfirm={() => router.delete(`/enrollment/${mhs.id}/reset`)}
+                                                    trigger={
+                                                        <Button size="sm" variant="outline"
+                                                            className="hover:bg-red-50 hover:text-red-600">
+                                                            <RotateCcw className="size-3.5 mr-1" /> Reset
+                                                        </Button>
+                                                    }
+                                                />
                                             )}
                                         </TableCell>
                                     </TableRow>

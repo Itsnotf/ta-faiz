@@ -9,7 +9,8 @@ import AppLayout from '@/layouts/app-layout';
 import hasAnyPermission from '@/lib/utils';
 import { type BreadcrumbItem, type Kelas, type Mahasiswa } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Pencil, PlusCircle, Trash2 } from 'lucide-react';
+import { Pencil, PlusCircle } from 'lucide-react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -140,10 +141,10 @@ export default function MahasiswaPage({ mahasiswa, kelas, filters, flash }: Prop
                                         <Button variant="outline" size="sm" onClick={() => openEditDialog(item)}><Pencil className="size-3.5" /></Button>
                                     )}
                                     {hasAnyPermission(['mahasiswa delete']) && (
-                                        <Button variant="outline" size="sm" className="hover:bg-red-50 hover:text-red-600"
-                                            onClick={() => { if (confirm('Hapus mahasiswa ini? Akun login juga akan dihapus.')) router.delete(`/mahasiswa/${item.id}`); }}>
-                                            <Trash2 className="size-3.5" />
-                                        </Button>
+                                        <ConfirmDialog
+                                            description="Data mahasiswa dan akun login-nya akan dihapus permanen."
+                                            onConfirm={() => router.delete(`/mahasiswa/${item.id}`)}
+                                        />
                                     )}
                                 </TableCell>
                             </TableRow>

@@ -7,7 +7,8 @@ import AppLayout from '@/layouts/app-layout';
 import hasAnyPermission from '@/lib/utils';
 import { type BreadcrumbItem, type Institusi } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, Pencil } from 'lucide-react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -62,11 +63,6 @@ export default function InstitusiPage({ institusi, filters, flash }: Props) {
         });
     }
 
-    function handleDelete(id: number) {
-        if (!confirm('Hapus institusi ini?')) return;
-        router.delete(`/institusi/${id}`);
-    }
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Institusi" />
@@ -112,9 +108,10 @@ export default function InstitusiPage({ institusi, filters, flash }: Props) {
                                         </Button>
                                     )}
                                     {hasAnyPermission(['institusi delete']) && (
-                                        <Button variant="outline" size="sm" className="hover:bg-red-50 hover:text-red-600" onClick={() => handleDelete(item.id)}>
-                                            <Trash2 className="size-3.5" />
-                                        </Button>
+                                        <ConfirmDialog
+                                            description="Data institusi ini akan dihapus permanen beserta seluruh data jurusan di bawahnya."
+                                            onConfirm={() => router.delete(`/institusi/${item.id}`)}
+                                        />
                                     )}
                                 </TableCell>
                             </TableRow>

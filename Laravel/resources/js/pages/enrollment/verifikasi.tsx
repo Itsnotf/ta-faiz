@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Mahasiswa } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import axios from 'axios';
+import { toast } from 'sonner';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -88,7 +89,7 @@ export default function VerifikasiPage({ mahasiswa, jarak_lulus }: Props) {
             }
         } catch (err: any) {
             const msg = err.response?.data?.message ?? 'Gagal menghubungi server.';
-            alert('Error: ' + msg);
+            toast.error(msg);
             setHasil(prev => ({ ...prev, [jarak]: { ...prev[jarak], loading: false } }));
         }
     }

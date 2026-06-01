@@ -8,7 +8,8 @@ import AppLayout from '@/layouts/app-layout';
 import hasAnyPermission from '@/lib/utils';
 import { type BreadcrumbItem, type Kelas, type Prodi } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Pencil, PlusCircle, Trash2 } from 'lucide-react';
+import { Pencil, PlusCircle } from 'lucide-react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -130,7 +131,10 @@ export default function KelasPage({ kelas, prodi, filters, flash }: Props) {
                                         <Button variant="outline" size="sm" onClick={() => openEditDialog(item)}><Pencil className="size-3.5" /></Button>
                                     )}
                                     {hasAnyPermission(['kelas delete']) && (
-                                        <Button variant="outline" size="sm" className="hover:bg-red-50 hover:text-red-600" onClick={() => { if (confirm('Hapus kelas ini?')) router.delete(`/kelas/${item.id}`); }}><Trash2 className="size-3.5" /></Button>
+                                        <ConfirmDialog
+                                            description="Data kelas ini akan dihapus permanen beserta seluruh data mahasiswa di dalamnya."
+                                            onConfirm={() => router.delete(`/kelas/${item.id}`)}
+                                        />
                                     )}
                                 </TableCell>
                             </TableRow>

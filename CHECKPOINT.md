@@ -4,8 +4,8 @@
 ---
 
 ## Status Terakhir
-**Task aktif:** — SEMUA TASK SELESAI — (debugging & tuning berlanjut)
-**Terakhir diupdate:** 2026-05-31
+**Task aktif:** — SEMUA TASK SELESAI (termasuk semua bugfix) —
+**Terakhir diupdate:** 2026-06-01
 
 ---
 
@@ -40,6 +40,31 @@
 | TASK-903 | Dashboard Mahasiswa | ✅ Selesai |
 | TASK-1001 | Rekap kehadiran | ✅ Selesai |
 | TASK-1002 | Export PDF & Excel | ✅ Selesai |
+
+---
+
+## Bugfix (TASK_LIST_BUGFIX.md)
+
+| Task | Nama | Status |
+|------|------|--------|
+| FIX-001 | camera.py — backend DirectShow + verifikasi frame pertama | ✅ Selesai |
+| FIX-002 | recognizer.py — numpy conversion + FRAME_SCALE default 0.5 | ✅ Selesai |
+| FIX-003 | python-service/.env — tambah FRAME_SCALE=0.5 | ✅ Selesai |
+| FIX-004 | InternalController encodings() — filter status_akun='aktif' | ✅ Selesai |
+| FIX-005 | InternalController recordAbsensi() — verifikasi mahasiswa ∈ kelas | ✅ Selesai |
+| FIX-006 | Hapus migration duplikat 2026_05_31_070031_create_institusis_table.php | ✅ Selesai |
+| FIX-007 | Buat komponen ConfirmDialog shadcn | ✅ Selesai |
+| FIX-008 | institusi/index.tsx — ganti confirm() | ✅ Selesai |
+| FIX-009 | jurusan/index.tsx — ganti confirm() | ✅ Selesai |
+| FIX-010 | prodi/index.tsx — ganti confirm() | ✅ Selesai |
+| FIX-011 | ruangan/index.tsx — ganti confirm() | ✅ Selesai |
+| FIX-012 | kelas/index.tsx — ganti confirm() | ✅ Selesai |
+| FIX-013 | dosen/index.tsx — ganti confirm() | ✅ Selesai |
+| FIX-014 | mahasiswa/index.tsx — ganti confirm() | ✅ Selesai |
+| FIX-015 | jadwal/index.tsx — ganti confirm() | ✅ Selesai |
+| FIX-016 | enrollment/index.tsx — ConfirmDialog + flash prop + useEffect | ✅ Selesai |
+| FIX-017 | enrollment/verifikasi.tsx — ganti alert() dengan toast.error() | ✅ Selesai |
+| FIX-018 | npm run build — build sukses tanpa error TypeScript | ✅ Selesai |
 
 ---
 
@@ -272,6 +297,31 @@
 - Routes: 6 routes di prefix `/enrollment` dengan middleware `can:enrollment index`
 - `verifyFrame` controller return `response()->json()` bukan Inertia ✅
 - Audit: upload 0 foto → 422 ✅ | approve sebelum verifikasi → 422 ✅ | Python mati → 503 ✅
+
+---
+
+## Catatan Bugfix (2026-06-01)
+
+### FIX-001 — FIX-003 ✅ Python camera + recognizer
+- `camera.py`: ganti `cv2.VideoCapture(0)` ke `cv2.VideoCapture(0, cv2.CAP_DSHOW)` di Windows (DirectShow lebih reliable daripada MSMF)
+- Tambah verifikasi hardware dengan membaca 1 frame sebelum cetak "Started"
+- `recognizer.py`: tambah `numpy` conversion untuk encodings dari JSON Laravel (`[np.array(e) for e in mhs["encodings"]]`)
+- FRAME_SCALE default naik dari `0.25` → `0.5` agar deteksi wajah lebih reliable di jarak normal
+- `.env`: tambah `FRAME_SCALE=0.5` eksplisit
+
+### FIX-004 — FIX-005 ✅ InternalController
+- `encodings()`: tambah `$mhs->status_akun === 'aktif'` agar mahasiswa pending tidak masuk recognition pool
+- `recordAbsensi()`: tambah cek `$mhs->kelas_id !== $sesi->jadwal->kelas_id` → return `not_in_class` 403
+
+### FIX-006 ✅ Migration duplikat
+- Hapus `2026_05_31_070031_create_institusis_table.php` (stub kosong, tabel `institusis` tidak dipakai)
+
+### FIX-007 — FIX-018 ✅ Frontend ConfirmDialog
+- Buat `resources/js/components/confirm-dialog.tsx` sebagai shared component berbasis shadcn AlertDialog
+- Ganti semua `window.confirm()` di 8 halaman CRUD (institusi, jurusan, prodi, ruangan, kelas, dosen, mahasiswa, jadwal)
+- enrollment/index.tsx: tambah `flash` prop + `useEffect` toast, ganti `handleReset` dengan ConfirmDialog
+- enrollment/verifikasi.tsx: ganti `alert()` dengan `toast.error()` dari sonner
+- Build sukses: `npm run build` selesai dalam 49s tanpa error TypeScript
 
 ---
 

@@ -8,7 +8,8 @@ import AppLayout from '@/layouts/app-layout';
 import hasAnyPermission from '@/lib/utils';
 import { type BreadcrumbItem, type Jurusan, type Prodi } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Pencil, PlusCircle, Trash2 } from 'lucide-react';
+import { Pencil, PlusCircle } from 'lucide-react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -91,7 +92,10 @@ export default function ProdiPage({ prodi, jurusan, filters, flash }: Props) {
                                         <Button variant="outline" size="sm" onClick={() => openEditDialog(item)}><Pencil className="size-3.5" /></Button>
                                     )}
                                     {hasAnyPermission(['prodi delete']) && (
-                                        <Button variant="outline" size="sm" className="hover:bg-red-50 hover:text-red-600" onClick={() => { if (confirm('Hapus prodi ini?')) router.delete(`/prodi/${item.id}`); }}><Trash2 className="size-3.5" /></Button>
+                                        <ConfirmDialog
+                                            description="Data prodi ini akan dihapus permanen."
+                                            onConfirm={() => router.delete(`/prodi/${item.id}`)}
+                                        />
                                     )}
                                 </TableCell>
                             </TableRow>
