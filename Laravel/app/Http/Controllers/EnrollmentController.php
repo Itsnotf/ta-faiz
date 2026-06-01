@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Dosen;
+use App\Models\EnrollmentVerifikasi;
 use App\Models\Kelas;
 use App\Models\Mahasiswa;
 use App\Services\EnrollmentService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class EnrollmentController extends Controller
 {
@@ -13,8 +16,8 @@ class EnrollmentController extends Controller
 
     public function index(Request $request)
     {
-        $user      = $request->user();
-        $jurusanId = $user->jurusan_id;
+        $user         = $request->user();
+        $jurusanId    = $user->jurusan_id;
         $isSuperAdmin = $user->isSuperAdmin();
 
         $kelasFilter = $request->kelas_id;
@@ -33,11 +36,52 @@ class EnrollmentController extends Controller
             ->orderBy('nama')
             ->get(['id', 'nama', 'prodi_id']);
 
+        $dosenList = Dosen::withCount('enrollmentVerifikasi')
+            ->when(!$isSuperAdmin && $jurusanId, fn($q) => $q->where('jurusan_id', $jurusanId))
+            ->orderByRaw("FIELD(status_enrollment, 'pending_verifikasi', 'pending_upload', 'aktif')")
+            ->orderBy('nama')
+            ->get(['id', 'nip', 'nama', 'email', 'status_enrollment']);
+
         return inertia('enrollment/index', [
-            'mahasiswa' => $mahasiswa,
-            'kelas'     => $kelas,
-            'filters'   => $request->only('kelas_id'),
+            'mahasiswa'  => $mahasiswa,
+            'dosen_list' => $dosenList,
+            'kelas'      => $kelas,
+            'filters'    => $request->only('kelas_id'),
+            'flash'      => ['success' => session('success'), 'error' => session('error')],
         ]);
+    }
+
+    public function detail(Mahasiswa $mahasiswa)
+    {
+        $verifikasi = EnrollmentVerifikasi::where('mahasiswa_id', $mahasiswa->id)
+            ->pluck('confidence', 'jarak')
+            ->toArray();
+
+        $fotoPreviews = [];
+        if ($mahasiswa->foto_paths) {
+            foreach ($mahasiswa->foto_paths as $i => $path) {
+                $fotoPreviews[] = [
+                    'index' => $i + 1,
+                    'url'   => route('enrollment.foto-preview', ['mahasiswa' => $mahasiswa->id, 'index' => $i]),
+                ];
+            }
+        }
+
+        return inertia('enrollment/detail', [
+            'mahasiswa'     => $mahasiswa->load('kelas'),
+            'foto_previews' => $fotoPreviews,
+            'jarak_lulus'   => $verifikasi,
+            'semua_lulus'   => count($verifikasi) >= 3,
+            'status_akun'   => $mahasiswa->status_akun,
+        ]);
+    }
+
+    public function fotoPreview(Mahasiswa $mahasiswa, int $index)
+    {
+        abort_unless($mahasiswa->foto_paths && isset($mahasiswa->foto_paths[$index]), 404);
+        $path = $mahasiswa->foto_paths[$index];
+        abort_unless(Storage::disk('local')->exists($path), 404);
+        return Storage::disk('local')->response($path);
     }
 
     public function selfVerifyPage(Request $request)
@@ -51,8 +95,8 @@ class EnrollmentController extends Controller
         $statusData = $this->enrollmentService->status($mahasiswa);
 
         return inertia('enrollment/self-verify', [
-            'mahasiswa'  => $mahasiswa->load('kelas'),
-            'jarak_lulus'=> $statusData['jarak_lulus'],
+            'mahasiswa'   => $mahasiswa->load('kelas'),
+            'jarak_lulus' => $statusData['jarak_lulus'],
         ]);
     }
 
@@ -74,6 +118,12 @@ class EnrollmentController extends Controller
             $request->jarak
         );
 
+        // Auto-approve jika semua 3 jarak sudah lulus
+        if (($result['semua_jarak_lulus'] ?? false) && $mahasiswa->status_akun === 'pending_verifikasi') {
+            $this->enrollmentService->approve($mahasiswa);
+            $result['auto_approved'] = true;
+        }
+
         return response()->json($result);
     }
 
@@ -87,8 +137,8 @@ class EnrollmentController extends Controller
         $statusData = $this->enrollmentService->status($mahasiswa);
 
         return inertia('enrollment/self-upload', [
-            'mahasiswa'    => $mahasiswa->load('kelas'),
-            'status'       => $statusData,
+            'mahasiswa' => $mahasiswa->load('kelas'),
+            'status'    => $statusData,
         ]);
     }
 
@@ -123,17 +173,6 @@ class EnrollmentController extends Controller
         return response()->json($this->enrollmentService->status($mahasiswa));
     }
 
-    public function uploadFoto(Request $request, Mahasiswa $mahasiswa)
-    {
-        $request->validate([
-            'foto.*' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
-        ]);
-
-        $this->enrollmentService->uploadFoto($mahasiswa, $request->file('foto'));
-
-        return back()->with('success', 'Foto berhasil diupload dan encoding wajah tersimpan.');
-    }
-
     public function verifyFrame(Request $request, Mahasiswa $mahasiswa)
     {
         $request->validate([
@@ -146,6 +185,12 @@ class EnrollmentController extends Controller
             $request->frame_base64,
             $request->jarak
         );
+
+        // Auto-approve jika semua 3 jarak sudah lulus
+        if (($result['semua_jarak_lulus'] ?? false) && $mahasiswa->status_akun === 'pending_verifikasi') {
+            $this->enrollmentService->approve($mahasiswa);
+            $result['auto_approved'] = true;
+        }
 
         return response()->json($result);
     }

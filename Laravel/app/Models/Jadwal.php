@@ -13,7 +13,7 @@ class Jadwal extends Model
     protected $fillable = [
         'kelas_id', 'dosen_id', 'ruangan_id',
         'mata_kuliah', 'hari', 'jam_mulai', 'jam_selesai',
-        'window_menit', 'is_active',
+        'window_menit', 'window_dosen_menit', 'is_active',
     ];
 
     protected $casts = [

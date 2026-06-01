@@ -36,6 +36,12 @@ interface AbsensiRow {
     hadir_at: string | null;
 }
 
+interface StatDosenHariIni {
+    total_jadwal: number;
+    hadir: number;
+    tidak_hadir: { nama: string; mata_kuliah: string; kelas: string }[];
+}
+
 interface Props {
     statHadir: number;
     statAlpa: number;
@@ -45,6 +51,7 @@ interface Props {
     keteranganPending: KeteranganPending[];
     absensiHariIni: AbsensiRow[];
     kehadiranMingguIni: { hadir: number; alpa: number; izin_sakit: number };
+    statDosenHariIni: StatDosenHariIni;
     flash?: { success?: string };
 }
 
@@ -66,6 +73,7 @@ const donutConfig = {
 export default function AdminJurusanDashboard({
     statHadir, statAlpa, statKetPending, statEnrollment,
     sesiAktif, keteranganPending, absensiHariIni, kehadiranMingguIni,
+    statDosenHariIni,
 }: Props) {
 
     const donutData = [
@@ -108,6 +116,43 @@ export default function AdminJurusanDashboard({
                         </Card>
                     ))}
                 </div>
+
+                {/* Dosen Hari Ini */}
+                {statDosenHariIni.total_jadwal > 0 && (
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base flex items-center justify-between">
+                                <span>Kehadiran Dosen Hari Ini</span>
+                                <Badge variant="outline">
+                                    {statDosenHariIni.hadir}/{statDosenHariIni.total_jadwal} hadir
+                                </Badge>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {statDosenHariIni.tidak_hadir.length === 0 ? (
+                                <p className="text-sm text-green-700 flex items-center gap-1.5">
+                                    <CheckCircle className="size-4" />
+                                    Semua dosen hadir hari ini.
+                                </p>
+                            ) : (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-muted-foreground mb-2">Dosen belum hadir:</p>
+                                    {statDosenHariIni.tidak_hadir.slice(0, 5).map((d, i) => (
+                                        <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b last:border-0">
+                                            <div>
+                                                <p className="font-medium">{d.nama}</p>
+                                                <p className="text-xs text-muted-foreground">{d.mata_kuliah} · {d.kelas}</p>
+                                            </div>
+                                            <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200 text-xs">
+                                                Belum Hadir
+                                            </Badge>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
 
                 <div className="grid gap-4 md:grid-cols-2">
 

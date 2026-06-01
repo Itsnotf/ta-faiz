@@ -137,6 +137,7 @@ export interface Jadwal {
     jam_mulai: string;
     jam_selesai: string;
     window_menit: number;
+    window_dosen_menit: number;
     is_active: boolean;
     created_at: string;
     updated_at: string;

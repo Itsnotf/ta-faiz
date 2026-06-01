@@ -43,6 +43,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('jadwal', JadwalController::class)->only(['index', 'store', 'update', 'destroy']);
 
     Route::get('absensi', [AbsensiController::class, 'index'])->name('absensi.index');
+    Route::get('absensi/{jadwal}', [AbsensiController::class, 'sesiList'])->name('absensi.sesi-list');
+    Route::get('absensi/{jadwal}/{sesi}', [AbsensiController::class, 'sesiDetail'])->name('absensi.sesi-detail');
 
     Route::prefix('laporan')->name('laporan.')->group(function () {
         Route::get('/', [LaporanController::class, 'index'])->name('index');
@@ -68,9 +70,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('enrollment')->name('enrollment.')->middleware('can:enrollment index')->group(function () {
         Route::get('/', [EnrollmentController::class, 'index'])->name('index');
+        Route::get('{mahasiswa}/detail', [EnrollmentController::class, 'detail'])->name('detail');
+        Route::get('{mahasiswa}/foto/{index}', [EnrollmentController::class, 'fotoPreview'])->name('foto-preview');
         Route::get('{mahasiswa}/verifikasi', [EnrollmentController::class, 'verifikasi'])->name('verifikasi');
         Route::get('{mahasiswa}/status', [EnrollmentController::class, 'status'])->name('status');
-        Route::post('{mahasiswa}/upload-foto', [EnrollmentController::class, 'uploadFoto'])->name('upload-foto');
         Route::post('{mahasiswa}/verify-frame', [EnrollmentController::class, 'verifyFrame'])->name('verify-frame');
         Route::patch('{mahasiswa}/approve', [EnrollmentController::class, 'approve'])->name('approve');
         Route::delete('{mahasiswa}/reset', [EnrollmentController::class, 'reset'])->name('reset');

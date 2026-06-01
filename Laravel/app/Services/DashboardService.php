@@ -273,6 +273,45 @@ class DashboardService
             'kelas.prodi', fn($q) => $q->where('jurusan_id', $jid)
         )->where('status_akun', 'aktif')->count();
 
+        // Statistik dosen hari ini
+        $hariMap2 = [0 => 'minggu', 1 => 'senin', 2 => 'selasa', 3 => 'rabu', 4 => 'kamis', 5 => 'jumat', 6 => 'sabtu'];
+        $hariIniDosen = $hariMap2[now('Asia/Jakarta')->dayOfWeek];
+
+        $jadwalHariIniDosen = Jadwal::where('hari', $hariIniDosen)
+            ->where('is_active', true)
+            ->whereHas('kelas.prodi', fn($q) => $q->where('jurusan_id', $jid))
+            ->with(['dosen', 'kelas'])
+            ->get();
+
+        $dosenHadirHariIni    = 0;
+        $dosenTidakHadirHariIni = [];
+
+        foreach ($jadwalHariIniDosen as $jadwalDosen) {
+            $sesiHariIni = SesiAbsensi::where('jadwal_id', $jadwalDosen->id)
+                ->whereDate('tanggal', today())->first();
+
+            if ($sesiHariIni) {
+                $absensiDosen = AbsensiDosen::where('sesi_id', $sesiHariIni->id)
+                    ->where('dosen_id', $jadwalDosen->dosen_id)->first();
+
+                if ($absensiDosen && $absensiDosen->status === 'hadir') {
+                    $dosenHadirHariIni++;
+                } else {
+                    $dosenTidakHadirHariIni[] = [
+                        'nama'        => $jadwalDosen->dosen->nama ?? '-',
+                        'mata_kuliah' => $jadwalDosen->mata_kuliah,
+                        'kelas'       => $jadwalDosen->kelas->nama ?? '-',
+                    ];
+                }
+            }
+        }
+
+        $statDosenHariIni = [
+            'total_jadwal' => $jadwalHariIniDosen->count(),
+            'hadir'        => $dosenHadirHariIni,
+            'tidak_hadir'  => $dosenTidakHadirHariIni,
+        ];
+
         $sesiAktif = SesiAbsensi::where('status', 'berlangsung')
             ->whereHas('jadwal', fn($q) => $q->whereHas('kelas.prodi', fn($q2) => $q2->where('jurusan_id', $jid)))
             ->with(['jadwal.kelas', 'jadwal.dosen', 'jadwal.ruangan'])
@@ -336,7 +375,8 @@ class DashboardService
 
         return compact(
             'statHadir', 'statAlpa', 'statKetPending', 'statEnrollment',
-            'sesiAktif', 'keteranganPending', 'absensiHariIni', 'kehadiranMingguIni'
+            'sesiAktif', 'keteranganPending', 'absensiHariIni', 'kehadiranMingguIni',
+            'statDosenHariIni'
         );
     }
 }

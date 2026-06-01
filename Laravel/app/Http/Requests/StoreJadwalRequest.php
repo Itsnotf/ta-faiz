@@ -21,7 +21,8 @@ class StoreJadwalRequest extends FormRequest
             'hari'         => ['required', 'in:senin,selasa,rabu,kamis,jumat,sabtu,minggu'],
             'jam_mulai'    => ['required', 'date_format:H:i'],
             'jam_selesai'  => ['required', 'date_format:H:i', 'after:jam_mulai'],
-            'window_menit' => ['required', 'integer', 'min:1', 'max:60'],
+            'window_menit'       => ['required', 'integer', 'min:1', 'max:60'],
+            'window_dosen_menit' => ['required', 'integer', 'min:1', 'max:120'],
         ];
     }
 }

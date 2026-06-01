@@ -91,11 +91,20 @@ const masterDataItems: NavItem[] = [
         icon: CalendarDays,
         permissions: ['jadwal index'],
     },
+];
+
+const enrollmentItems: NavItem[] = [
     {
         title: 'Enrollment',
         href: '/enrollment',
         icon: ScanFace,
         permissions: ['enrollment index'],
+    },
+    {
+        title: 'Enrollment Wajah',
+        href: '/enrollment-dosen',
+        icon: ScanFace,
+        permissions: ['enrollment_dosen index'],
     },
 ];
 
@@ -105,6 +114,12 @@ const absensiItems: NavItem[] = [
         href: '/absensi',
         icon: ClipboardList,
         permissions: ['absensi index'],
+    },
+    {
+        title: 'Koreksi Absensi Dosen',
+        href: '/koreksi-dosen/admin',
+        icon: ShieldCheck,
+        permissions: ['koreksi_dosen approve'],
     },
 ];
 
@@ -125,22 +140,10 @@ const keteranganItems: NavItem[] = [
 
 const dosenItems: NavItem[] = [
     {
-        title: 'Enrollment Wajah',
-        href: '/enrollment-dosen',
-        icon: ScanFace,
-        permissions: ['enrollment_dosen index'],
-    },
-    {
         title: 'Koreksi Absensi',
         href: '/koreksi-dosen',
         icon: ClipboardList,
         permissions: ['koreksi_dosen create'],
-    },
-    {
-        title: 'Koreksi Absensi Dosen',
-        href: '/koreksi-dosen/admin',
-        icon: ShieldCheck,
-        permissions: ['koreksi_dosen approve'],
     },
 ];
 
@@ -179,6 +182,7 @@ export function AppSidebar() {
             <SidebarContent>
                 <NavMain section='Platform' items={mainNavItems} />
                 <NavMain section='Master Data' items={masterDataItems} />
+                <NavMain section='Enrollment' items={enrollmentItems} />
                 <NavMain section='Absensi' items={absensiItems} />
                 <NavMain section='Keterangan' items={keteranganItems} />
                 <NavMain section='Dosen' items={dosenItems} />

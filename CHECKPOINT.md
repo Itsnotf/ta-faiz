@@ -4,7 +4,7 @@
 ---
 
 ## Status Terakhir
-**Task aktif:** — SEMUA TASK DOSEN SELESAI —
+**Task aktif:** — SEMUA TASK UX REDESIGN SELESAI —
 **Terakhir diupdate:** 2026-06-02
 
 ---
@@ -470,6 +470,74 @@ Selama belum jam 23:10, kamera memang harus tetap terbuka.
 - Chunk baru: dosen-*.js (6.56KB), verifikasi-*.js x2, admin-*.js, mahasiswa-*.js, textarea-*.js
 
 ---
+
+## UX Redesign (TASK_LIST_UX_Redesign.md) — 2026-06-02
+
+| Task | Nama | Status |
+|------|------|--------|
+| BUG-001 | Fix window_dosen_menit | ✅ Selesai |
+| UX-A01 | Rekap Absensi — Backend | ✅ Selesai |
+| UX-A02 | Rekap Absensi — Level 1 Frontend | ✅ Selesai |
+| UX-A03 | Rekap Absensi — Level 2 Frontend | ✅ Selesai |
+| UX-A04 | Rekap Absensi — Level 3 Frontend | ✅ Selesai |
+| UX-B01 | Enrollment — Backend | ✅ Selesai |
+| UX-B02 | Enrollment — Frontend (Tabs + Detail) | ✅ Selesai |
+| UX-C01 | Dashboard Admin Jurusan — Backend | ✅ Selesai |
+| UX-C02 | Dashboard Admin Jurusan — Frontend | ✅ Selesai |
+| UX-C03 | Dashboard Mahasiswa — Frontend | ✅ Selesai |
+| UX-D01 | Sidebar — Restrukturisasi | ✅ Selesai |
+| UX-E01 | npm run build — verifikasi | ✅ Selesai |
+
+---
+
+## Catatan UX Redesign (2026-06-02)
+
+### BUG-001 ✅ — Fix window_dosen_menit
+- `StoreJadwalRequest` + `UpdateJadwalRequest`: tambah rule `window_dosen_menit` required integer min:1 max:120
+- `Jadwal` model: tambah `window_dosen_menit` ke `$fillable`
+- `InternalController::recordAbsensi()`: baris window sekarang bercabang — dosen pakai `window_dosen_menit`, mahasiswa pakai `window_menit`
+- `types/index.d.ts`: tambah `window_dosen_menit: number` ke interface Jadwal
+- `jadwal/index.tsx`: `emptyForm` tambah `window_dosen_menit: '30'`, `openEditDialog()` populate field, form field dipecah jadi 2 (Mahasiswa + Dosen), `grid-cols-3` → `grid-cols-2` untuk jam + window terpisah
+
+### UX-A01 ✅ — Rekap Absensi Backend
+- `AbsensiService`: GANTI total — hapus 4 method lama (getKelasList, getJadwalByKelas, getSesiByJadwal, getRekapSesi), TAMBAH 3 method baru (getJadwalListWithStats, getSesiListByJadwal, getSesiDetail)
+- `AbsensiController`: GANTI total — 3 method (index/sesiList/sesiDetail), middleware update ke 3 method
+- `routes/web.php`: tambah 2 route baru (`GET absensi/{jadwal}` → sesiList, `GET absensi/{jadwal}/{sesi}` → sesiDetail)
+
+### UX-A02 ✅ — Rekap Absensi Level 1 Frontend
+- `absensi/index.tsx`: GANTI total — tabel jadwal langsung tampil tanpa filter, search bar + filter hari, badge % kehadiran berwarna, DosenStatusBadge sesi terakhir, klik baris → navigasi ke Level 2
+
+### UX-A03 ✅ — Rekap Absensi Level 2 Frontend
+- `absensi/sesi-list.tsx`: BUAT FILE BARU — header dengan back button, 4 info cards, tabel sesi dengan progress bar %, status dosen per sesi, klik baris → navigasi ke Level 3
+
+### UX-A04 ✅ — Rekap Absensi Level 3 Frontend
+- `absensi/sesi-detail.tsx`: BUAT FILE BARU — dosen card menonjol di atas (warna border sesuai status), 4 summary stat mahasiswa, tabel mahasiswa lengkap dengan status + confidence + lock icon
+
+### UX-B01 ✅ — Enrollment Backend
+- `EnrollmentController`: TAMBAH `detail()` dan `fotoPreview()`, TAMBAH auto-approve di `verifyFrame()` dan `selfVerifyFrame()`, UPDATE `index()` sertakan `dosen_list` (Dosen::withCount), TAMBAH `use Dosen, EnrollmentVerifikasi, Storage`
+- `routes/web.php`: TAMBAH `{mahasiswa}/detail` dan `{mahasiswa}/foto/{index}`, HAPUS `upload-foto` admin route
+
+### UX-B02 ✅ — Enrollment Frontend
+- `npx shadcn@latest add tabs` — install komponen Tabs
+- `enrollment/index.tsx`: GANTI total — Tabs (Mahasiswa | Dosen), tab mahasiswa hapus Upload + Approve (auto), tambah tombol Detail, tab dosen dari dosen_list
+- `enrollment/detail.tsx`: BUAT FILE BARU — back button, foto preview 5 grid, verifikasi 3 jarak (CheckCircle/XCircle), tombol Approve (jika semua_lulus), tombol Reset
+
+### UX-C01 ✅ — Dashboard Admin Jurusan Backend
+- `DashboardService::forAdminJurusan()`: TAMBAH blok statistik dosen hari ini — query jadwal hari ini per jurusan, loop cek AbsensiDosen per sesi, return `statDosenHariIni` (total_jadwal, hadir, tidak_hadir[])
+- `compact()` return: tambah `statDosenHariIni`
+
+### UX-C02 ✅ — Dashboard Admin Jurusan Frontend
+- `dashboard/admin-jurusan.tsx`: TAMBAH interface `StatDosenHariIni`, TAMBAH ke Props + destructure, TAMBAH Card "Kehadiran Dosen Hari Ini" antara stat cards dan grid — tampilkan hitungan hadir/total + daftar yang belum hadir
+
+### UX-C03 ✅ — Dashboard Mahasiswa Frontend
+- `dashboard/mahasiswa.tsx`: PINDAHKAN jadwal_hari_ini dari bawah stat cards ke ATAS (sebelum stat cards), GANTI format dari Card biasa ke Card dengan `border-blue-200 bg-blue-50/50`, GANTI warning AlertTriangle (div) ke Card `border-red-200` dengan AlertCircle, HAPUS sesiStatusConfig yang tidak lagi dipakai
+
+### UX-D01 ✅ — Sidebar Restrukturisasi
+- `app-sidebar.tsx`: HAPUS 'Enrollment' dari masterDataItems, BUAT `enrollmentItems` (admin enrollment + dosen enrollment), UPDATE `absensiItems` tambah 'Koreksi Absensi Dosen' (admin), UPDATE `dosenItems` hapus Enrollment Wajah + Koreksi Absensi Dosen (hanya sisa Koreksi Absensi dosen), TAMBAH `<NavMain section='Enrollment'>` di SidebarContent
+
+### UX-E01 ✅ — npm run build
+- `npm run build` — 3419 modules transformed, build sukses dalam 98 detik tanpa error TypeScript ✅
+- Chunk baru: sesi-list-*.js, sesi-detail-*.js, detail-*.js, admin-jurusan-*.js (26.39KB)
 
 ---
 

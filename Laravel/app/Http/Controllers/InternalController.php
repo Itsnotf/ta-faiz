@@ -125,8 +125,11 @@ class InternalController extends Controller
             return response()->json(['status' => 'sesi_not_found'], 404);
         }
 
-        // Cek window waktu hadir
-        $batasWindow = Carbon::parse($sesi->mulai_at)->addMinutes($sesi->jadwal->window_menit);
+        // Cek window waktu hadir (dosen pakai window_dosen_menit, mahasiswa pakai window_menit)
+        $windowMenit = $request->type === 'dosen'
+            ? $sesi->jadwal->window_dosen_menit
+            : $sesi->jadwal->window_menit;
+        $batasWindow = Carbon::parse($sesi->mulai_at)->addMinutes($windowMenit);
         if (now()->isAfter($batasWindow)) {
             return response()->json(['status' => 'out_of_window']);
         }

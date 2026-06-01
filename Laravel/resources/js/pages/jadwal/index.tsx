@@ -39,7 +39,7 @@ const hariBadgeColor: Record<string, string> = {
 
 const emptyForm = {
     kelas_id: '', dosen_id: '', ruangan_id: '',
-    mata_kuliah: '', hari: '', jam_mulai: '', jam_selesai: '', window_menit: '15',
+    mata_kuliah: '', hari: '', jam_mulai: '', jam_selesai: '', window_menit: '15', window_dosen_menit: '30',
 };
 
 export default function JadwalPage({ jadwal, kelas, dosen, ruangan, filters, flash }: Props) {
@@ -66,6 +66,7 @@ export default function JadwalPage({ jadwal, kelas, dosen, ruangan, filters, fla
             ruangan_id: String(item.ruangan_id), mata_kuliah: item.mata_kuliah,
             hari: item.hari, jam_mulai: item.jam_mulai.slice(0, 5),
             jam_selesai: item.jam_selesai.slice(0, 5), window_menit: String(item.window_menit),
+            window_dosen_menit: String(item.window_dosen_menit ?? 30),
             _method: 'PUT',
         });
         setOpenEdit(true);
@@ -125,7 +126,7 @@ export default function JadwalPage({ jadwal, kelas, dosen, ruangan, filters, fla
                 <Input value={form.data.mata_kuliah} onChange={e => form.setData('mata_kuliah', e.target.value)} placeholder="Pemrograman Web" />
                 {form.errors.mata_kuliah && <p className="text-xs text-red-500">{form.errors.mata_kuliah}</p>}
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                     <Label>Jam Mulai <span className="text-red-500">*</span></Label>
                     <Input type="time" value={form.data.jam_mulai} onChange={e => form.setData('jam_mulai', e.target.value)} />
@@ -136,9 +137,17 @@ export default function JadwalPage({ jadwal, kelas, dosen, ruangan, filters, fla
                     <Input type="time" value={form.data.jam_selesai} onChange={e => form.setData('jam_selesai', e.target.value)} />
                     {form.errors.jam_selesai && <p className="text-xs text-red-500">{form.errors.jam_selesai}</p>}
                 </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                    <Label>Window (menit)</Label>
+                    <Label>Window Mahasiswa (menit)</Label>
                     <Input type="number" min={1} max={60} value={form.data.window_menit} onChange={e => form.setData('window_menit', e.target.value)} />
+                    <p className="text-xs text-muted-foreground">Waktu toleransi hadir mahasiswa</p>
+                </div>
+                <div className="space-y-1">
+                    <Label>Window Dosen (menit)</Label>
+                    <Input type="number" min={1} max={120} value={form.data.window_dosen_menit} onChange={e => form.setData('window_dosen_menit', e.target.value)} />
+                    <p className="text-xs text-muted-foreground">Waktu toleransi hadir dosen (default 2×)</p>
                 </div>
             </div>
         </>

@@ -1,170 +1,181 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
+import { ChevronRight, Search } from 'lucide-react';
+import { useState, useMemo } from 'react';
 
-interface Kelas  { id: number; nama: string; prodi?: { nama: string } }
-interface Jadwal { id: number; mata_kuliah: string; hari: string; jam_mulai: string; jam_selesai: string }
-interface Sesi   { id: number; tanggal: string; status: string }
-interface RekapRow {
-    mahasiswa_id: number;
-    nim: string;
-    nama: string;
-    status: string;
-    hadir_at: string | null;
-    confidence: number | null;
-    is_locked: boolean;
+interface JadwalRow {
+    id: number;
+    mata_kuliah: string;
+    hari: string;
+    jam_mulai: string;
+    jam_selesai: string;
+    kelas: string;
+    prodi: string;
+    dosen: string;
+    ruangan: string;
+    total_sesi: number;
+    total_mahasiswa: number;
+    persen_hadir: number | null;
+    status_dosen_terakhir: string | null;
 }
 
 interface Props {
-    kelasList:  Kelas[];
-    jadwalList: Jadwal[];
-    sesiList:   Sesi[];
-    rekap:      RekapRow[];
-    filters: { kelas_id?: string; jadwal_id?: string; sesi_id?: string };
+    jadwal_list: JadwalRow[];
 }
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Rekap Absensi', href: '/absensi' }];
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-    hadir:  { label: 'Hadir',  className: 'bg-green-100 text-green-800 border-green-200' },
-    alpa:   { label: 'Alpa',   className: 'bg-red-100 text-red-700 border-red-200' },
-    izin:   { label: 'Izin',   className: 'bg-blue-100 text-blue-800 border-blue-200' },
-    sakit:  { label: 'Sakit',  className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-    belum:  { label: 'Belum',  className: 'bg-gray-100 text-gray-500 border-gray-200' },
+const HARI_ORDER = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+const HARI_LABELS: Record<string, string> = {
+    senin: 'Senin', selasa: 'Selasa', rabu: 'Rabu',
+    kamis: 'Kamis', jumat: 'Jumat', sabtu: 'Sabtu',
 };
 
-export default function AbsensiPage({ kelasList, jadwalList, sesiList, rekap, filters }: Props) {
+function PersenBadge({ persen }: { persen: number | null }) {
+    if (persen === null) return <span className="text-sm text-muted-foreground">—</span>;
+    const cls = persen >= 80
+        ? 'bg-green-100 text-green-800 border-green-200'
+        : persen >= 60
+        ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+        : 'bg-red-100 text-red-800 border-red-200';
+    return <Badge variant="outline" className={cls}>{persen}%</Badge>;
+}
 
-    function setFilter(key: string, val: string) {
-        const params: Record<string, string> = { ...filters };
-        params[key] = val;
-        // Reset downstream filters
-        if (key === 'kelas_id') { delete params.jadwal_id; delete params.sesi_id; }
-        if (key === 'jadwal_id') { delete params.sesi_id; }
-        router.get('/absensi', params, { preserveState: true });
-    }
+function DosenStatusBadge({ status }: { status: string | null }) {
+    if (!status || status === 'belum') return (
+        <Badge variant="outline" className="bg-gray-100 text-gray-500 border-gray-200 text-xs">—</Badge>
+    );
+    if (status === 'hadir') return (
+        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 text-xs">Hadir</Badge>
+    );
+    return (
+        <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200 text-xs">Alpa</Badge>
+    );
+}
 
-    const hadir  = rekap.filter(r => r.status === 'hadir').length;
-    const alpa   = rekap.filter(r => r.status === 'alpa').length;
-    const izin   = rekap.filter(r => r.status === 'izin').length;
-    const sakit  = rekap.filter(r => r.status === 'sakit').length;
-    const total  = rekap.length;
+export default function AbsensiPage({ jadwal_list }: Props) {
+    const [search, setSearch] = useState('');
+    const [filterHari, setFilterHari] = useState<string>('semua');
+
+    const filtered = useMemo(() => {
+        return jadwal_list.filter(j => {
+            const matchSearch = search === '' ||
+                j.mata_kuliah.toLowerCase().includes(search.toLowerCase()) ||
+                j.kelas.toLowerCase().includes(search.toLowerCase()) ||
+                j.dosen.toLowerCase().includes(search.toLowerCase());
+            const matchHari = filterHari === 'semua' || j.hari === filterHari;
+            return matchSearch && matchHari;
+        });
+    }, [jadwal_list, search, filterHari]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Rekap Absensi" />
             <div className="p-4 space-y-4">
 
-                {/* Filter Bar */}
-                <div className="flex flex-wrap gap-3">
-                    <Select value={filters.kelas_id ?? ''} onValueChange={v => setFilter('kelas_id', v)}>
-                        <SelectTrigger className="w-52">
-                            <SelectValue placeholder="Pilih Kelas..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {kelasList.map(k => (
-                                <SelectItem key={k.id} value={String(k.id)}>
-                                    {k.nama} {k.prodi ? `— ${k.prodi.nama}` : ''}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-
-                    <Select value={filters.jadwal_id ?? ''} onValueChange={v => setFilter('jadwal_id', v)} disabled={!filters.kelas_id}>
-                        <SelectTrigger className="w-60">
-                            <SelectValue placeholder="Pilih Jadwal..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {jadwalList.map(j => (
-                                <SelectItem key={j.id} value={String(j.id)}>
-                                    {j.mata_kuliah} ({j.hari} {j.jam_mulai.slice(0,5)})
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-
-                    <Select value={filters.sesi_id ?? ''} onValueChange={v => setFilter('sesi_id', v)} disabled={!filters.jadwal_id}>
-                        <SelectTrigger className="w-44">
-                            <SelectValue placeholder="Pilih Tanggal..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {sesiList.map(s => (
-                                <SelectItem key={s.id} value={String(s.id)}>
-                                    {s.tanggal} ({s.status})
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-lg font-semibold">Rekap Absensi</h1>
+                        <p className="text-sm text-muted-foreground">
+                            {jadwal_list.length} jadwal — klik baris untuk melihat rekap per sesi
+                        </p>
+                    </div>
                 </div>
 
-                {/* Summary Cards */}
-                {rekap.length > 0 && (
-                    <div className="grid grid-cols-4 gap-3">
-                        {[
-                            { label: 'Hadir',  value: hadir,  cls: 'text-green-700 bg-green-50' },
-                            { label: 'Alpa',   value: alpa,   cls: 'text-red-700 bg-red-50' },
-                            { label: 'Izin',   value: izin,   cls: 'text-blue-700 bg-blue-50' },
-                            { label: 'Sakit',  value: sakit,  cls: 'text-yellow-700 bg-yellow-50' },
-                        ].map(c => (
-                            <div key={c.label} className={`rounded-xl border p-3 text-center ${c.cls}`}>
-                                <p className="text-2xl font-bold">{c.value}</p>
-                                <p className="text-sm">{c.label} / {total}</p>
-                            </div>
+                {/* Filter Bar */}
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative w-64">
+                        <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+                        <Input
+                            className="pl-8"
+                            placeholder="Cari mata kuliah, kelas, dosen..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex gap-1">
+                        {['semua', ...HARI_ORDER].map(h => (
+                            <Button
+                                key={h}
+                                size="sm"
+                                variant={filterHari === h ? 'default' : 'outline'}
+                                onClick={() => setFilterHari(h)}
+                                className="capitalize"
+                            >
+                                {h === 'semua' ? 'Semua' : HARI_LABELS[h]}
+                            </Button>
                         ))}
                     </div>
-                )}
+                </div>
 
-                {/* Tabel Rekap */}
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>NIM</TableHead>
-                            <TableHead>Nama</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Waktu Hadir</TableHead>
-                            <TableHead>Confidence</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {rekap.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="text-center text-muted-foreground py-12">
-                                    {filters.sesi_id
-                                        ? 'Tidak ada data untuk sesi ini.'
-                                        : 'Pilih kelas → jadwal → tanggal sesi untuk melihat rekap.'}
-                                </TableCell>
+                {/* Tabel Jadwal */}
+                <div className="rounded-lg border overflow-hidden">
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-muted/50">
+                                <TableHead>Mata Kuliah</TableHead>
+                                <TableHead>Kelas / Prodi</TableHead>
+                                <TableHead>Dosen</TableHead>
+                                <TableHead>Jadwal</TableHead>
+                                <TableHead className="text-center">Total Sesi</TableHead>
+                                <TableHead className="text-center">% Hadir Mhs</TableHead>
+                                <TableHead className="text-center">Dosen Sesi Terakhir</TableHead>
+                                <TableHead className="w-10"></TableHead>
                             </TableRow>
-                        ) : (
-                            rekap.map(row => {
-                                const cfg = statusConfig[row.status] ?? statusConfig.belum;
-                                return (
-                                    <TableRow key={row.mahasiswa_id}>
-                                        <TableCell className="font-mono text-sm">{row.nim}</TableCell>
-                                        <TableCell className="font-medium">{row.nama}</TableCell>
+                        </TableHeader>
+                        <TableBody>
+                            {filtered.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="text-center text-muted-foreground py-16">
+                                        {jadwal_list.length === 0
+                                            ? 'Belum ada jadwal yang tersedia.'
+                                            : 'Tidak ada jadwal yang cocok dengan filter.'}
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                filtered.map(j => (
+                                    <TableRow
+                                        key={j.id}
+                                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                        onClick={() => router.get(`/absensi/${j.id}`)}
+                                    >
+                                        <TableCell className="font-medium">{j.mata_kuliah}</TableCell>
                                         <TableCell>
-                                            <Badge variant="outline" className={cfg.className}>
-                                                {cfg.label}
-                                            </Badge>
-                                            {row.is_locked && (
-                                                <span className="ml-1 text-xs text-red-500">🔒</span>
-                                            )}
+                                            <p className="font-medium text-sm">{j.kelas}</p>
+                                            <p className="text-xs text-muted-foreground">{j.prodi}</p>
                                         </TableCell>
-                                        <TableCell className="font-mono text-sm">
-                                            {row.hadir_at ?? '—'}
+                                        <TableCell className="text-sm">{j.dosen}</TableCell>
+                                        <TableCell>
+                                            <p className="text-sm font-medium capitalize">{j.hari}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {j.jam_mulai} – {j.jam_selesai}
+                                            </p>
                                         </TableCell>
-                                        <TableCell className="text-sm text-muted-foreground">
-                                            {row.confidence != null ? `${row.confidence}%` : '—'}
+                                        <TableCell className="text-center">
+                                            <span className="font-medium">{j.total_sesi}</span>
+                                            <span className="text-xs text-muted-foreground ml-1">pertemuan</span>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <PersenBadge persen={j.persen_hadir} />
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <DosenStatusBadge status={j.status_dosen_terakhir} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <ChevronRight className="size-4 text-muted-foreground" />
                                         </TableCell>
                                     </TableRow>
-                                );
-                            })
-                        )}
-                    </TableBody>
-                </Table>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
         </AppLayout>
     );

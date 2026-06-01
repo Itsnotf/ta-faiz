@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { AlertTriangle, Camera, CheckCircle, Circle, Info, Upload } from 'lucide-react';
+import { AlertCircle, Camera, CheckCircle, Circle, Info, Upload } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 interface Matkul  { mata_kuliah: string; hadir: number; total: number; persen: number }
@@ -61,12 +61,6 @@ function getStepStatus(status_akun: string, jarak_lulus: string[], semua_jarak_l
     ];
 }
 
-const sesiStatusConfig: Record<string, { label: string; className: string }> = {
-    berlangsung: { label: 'Berlangsung', className: 'bg-green-100 text-green-800 border-green-200' },
-    selesai:     { label: 'Selesai',     className: 'bg-gray-100 text-gray-600 border-gray-200' },
-    belum:       { label: 'Belum Mulai', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-};
-
 export default function MahasiswaDashboard({
     mahasiswa, stat, kehadiran_per_matkul, warning_matkul,
     jadwal_minggu_ini, jadwal_hari_ini, hari_ini, riwayat_terbaru, enrollment_status,
@@ -101,26 +95,71 @@ export default function MahasiswaDashboard({
                     </div>
                 )}
 
-                {/* Banner Warning Matkul */}
-                {warning_matkul.length > 0 && (
-                    <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
-                        <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 mt-0.5" />
-                        <div>
-                            <p className="font-medium text-red-800 text-sm">Kehadiran di bawah 80%!</p>
-                            <ul className="text-xs text-red-700 mt-1 list-disc list-inside space-y-0.5">
-                                {warning_matkul.map(w => (
-                                    <li key={w.mata_kuliah}>{w.mata_kuliah} — {w.persen}% ({w.hadir}/{w.total})</li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                )}
-
                 {/* Header Mahasiswa */}
                 <div>
                     <h1 className="text-xl font-semibold">{mahasiswa.nama}</h1>
                     <p className="text-sm text-muted-foreground">{mahasiswa.nim} · {mahasiswa.kelas} · {mahasiswa.prodi}</p>
                 </div>
+
+                {/* Jadwal Hari Ini — paling atas */}
+                {hari_ini && (
+                    <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base capitalize">Jadwal Hari Ini — {hari_ini}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {jadwal_hari_ini.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">Tidak ada jadwal kuliah hari ini.</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {jadwal_hari_ini.map((j, i) => (
+                                        <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b last:border-0">
+                                            <div>
+                                                <p className="font-medium">{j.mata_kuliah}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {j.dosen} · {j.ruangan} · {j.jam_mulai}–{j.jam_selesai}
+                                                </p>
+                                            </div>
+                                            <Badge variant="outline"
+                                                className={j.status_sesi === 'berlangsung'
+                                                    ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                                    : j.status_sesi === 'selesai'
+                                                    ? 'bg-gray-100 text-gray-600 border-gray-200'
+                                                    : 'bg-muted text-muted-foreground'}>
+                                                {j.status_sesi === 'berlangsung' ? 'Sedang Berlangsung'
+                                                    : j.status_sesi === 'selesai' ? 'Selesai'
+                                                    : 'Belum Dimulai'}
+                                            </Badge>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Warning Kehadiran — jika ada yang < 80% */}
+                {warning_matkul.length > 0 && (
+                    <Card className="border-red-200 bg-red-50/50 dark:bg-red-950/20">
+                        <CardContent className="pt-4">
+                            <div className="flex items-start gap-2">
+                                <AlertCircle className="size-5 text-red-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-sm font-semibold text-red-800">
+                                        Perhatian: {warning_matkul.length} mata kuliah di bawah 80% kehadiran
+                                    </p>
+                                    <div className="mt-1.5 space-y-1">
+                                        {warning_matkul.map((m, i) => (
+                                            <p key={i} className="text-xs text-red-700">
+                                                {m.mata_kuliah} — {m.persen}% ({m.hadir}/{m.total} pertemuan)
+                                            </p>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Stat Cards */}
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -141,40 +180,6 @@ export default function MahasiswaDashboard({
                 <p className="text-sm text-muted-foreground -mt-2 text-center">
                     Rata-rata kehadiran: <strong>{stat.rata_rata}%</strong>
                 </p>
-
-                {/* Jadwal Hari Ini */}
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Jadwal Hari Ini</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {jadwal_hari_ini.length === 0 ? (
-                            <p className="text-sm text-muted-foreground py-2 text-center">Tidak ada jadwal hari ini.</p>
-                        ) : (
-                            <div className="space-y-2">
-                                {jadwal_hari_ini.map((j, i) => {
-                                    const sesiCfg = sesiStatusConfig[j.status_sesi] ?? sesiStatusConfig.belum;
-                                    return (
-                                        <div key={i} className="flex items-center justify-between rounded-lg border border-sidebar-border/60 px-4 py-2.5">
-                                            <div>
-                                                <p className="font-medium text-sm">{j.mata_kuliah}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {j.dosen} · {j.ruangan}
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-mono text-sm">{j.jam_mulai} – {j.jam_selesai}</p>
-                                                <Badge variant="outline" className={`text-[10px] mt-0.5 ${sesiCfg.className}`}>
-                                                    {sesiCfg.label}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
 
                 <div className="grid gap-4 md:grid-cols-2">
 
