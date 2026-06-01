@@ -20,33 +20,28 @@ class AbsensiController extends Controller implements HasMiddleware
         ];
     }
 
-    // Level 1: Daftar semua jadwal dengan statistik
     public function index(Request $request)
     {
         $user         = $request->user();
         $jurusanId    = $user->jurusan_id;
         $isSuperAdmin = $user->isSuperAdmin();
 
-        $jadwalList = $this->absensiService->getJadwalListWithStats($jurusanId, $isSuperAdmin);
-
         return inertia('absensi/index', [
-            'jadwal_list' => $jadwalList,
+            'jadwal_list' => $this->absensiService->getJadwalListWithStats($jurusanId, $isSuperAdmin),
         ]);
     }
 
-    // Level 2: Daftar sesi per jadwal
     public function sesiList(Jadwal $jadwal)
     {
-        $data = $this->absensiService->getSesiListByJadwal($jadwal->load(['kelas.mahasiswa', 'dosen', 'ruangan']));
-
-        return inertia('absensi/sesi-list', $data);
+        return inertia('absensi/sesi-list',
+            $this->absensiService->getSesiListByJadwal($jadwal)
+        );
     }
 
-    // Level 3: Detail satu sesi
     public function sesiDetail(Jadwal $jadwal, SesiAbsensi $sesi)
     {
-        $data = $this->absensiService->getSesiDetail($sesi->load('jadwal'));
-
-        return inertia('absensi/sesi-detail', $data);
+        return inertia('absensi/sesi-detail',
+            $this->absensiService->getSesiDetail($sesi)
+        );
     }
 }

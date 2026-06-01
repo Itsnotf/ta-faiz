@@ -12,15 +12,19 @@ import { Link, usePage } from '@inertiajs/react';
 
 export function NavMain({ section, items = [] }: { items: NavItem[], section?: string }) {
     const page = usePage();
-    const { auth } = page.props as { auth?: { permissions?: Permission[] } };
+    const { auth } = page.props as { auth?: { permissions?: Permission[]; roles?: string[] } };
     const userPerms = auth?.permissions?.map(p => p.name) ?? [];
+    const userRoles = auth?.roles ?? [];
 
-    function canSee(perms?: string[]) {
-        if (!perms?.length) return true;
-        return perms.some(p => userPerms.includes(p));
+    function canSee(item: NavItem): boolean {
+        if (item.roles?.length) {
+            if (!item.roles.some(r => userRoles.includes(r))) return false;
+        }
+        if (!item.permissions?.length) return true;
+        return item.permissions.some(p => userPerms.includes(p));
     }
 
-    const visibleItems = items.filter(item => canSee(item.permissions));
+    const visibleItems = items.filter(item => canSee(item));
 
     // Hide entire section if no items are visible
     if (visibleItems.length === 0) return null;

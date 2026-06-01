@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { StatCard } from '@/components/stat-card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
@@ -140,15 +141,15 @@ export default function MahasiswaDashboard({
 
                 {/* Warning Kehadiran — jika ada yang < 80% */}
                 {warning_matkul.length > 0 && (
-                    <Card className="border-red-200 bg-red-50/50 dark:bg-red-950/20">
-                        <CardContent className="pt-4">
-                            <div className="flex items-start gap-2">
+                    <Card className="border-l-4 border-l-red-500 bg-red-50/30 dark:bg-red-950/10">
+                        <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
                                 <AlertCircle className="size-5 text-red-600 shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="text-sm font-semibold text-red-800">
-                                        Perhatian: {warning_matkul.length} mata kuliah di bawah 80% kehadiran
+                                    <p className="font-semibold text-red-800 text-sm">
+                                        {warning_matkul.length} mata kuliah kehadiran di bawah 80%
                                     </p>
-                                    <div className="mt-1.5 space-y-1">
+                                    <div className="mt-1.5 space-y-0.5">
                                         {warning_matkul.map((m, i) => (
                                             <p key={i} className="text-xs text-red-700">
                                                 {m.mata_kuliah} — {m.persen}% ({m.hadir}/{m.total} pertemuan)
@@ -162,24 +163,12 @@ export default function MahasiswaDashboard({
                 )}
 
                 {/* Stat Cards */}
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    {[
-                        { label: 'Hadir',     value: stat.hadir,    cls: 'text-green-700 bg-green-50' },
-                        { label: 'Alpa',      value: stat.alpa,     cls: 'text-red-700 bg-red-50' },
-                        { label: 'Izin',      value: stat.izin,     cls: 'text-blue-700 bg-blue-50' },
-                        { label: 'Sakit',     value: stat.sakit,    cls: 'text-yellow-700 bg-yellow-50' },
-                    ].map(c => (
-                        <Card key={c.label}>
-                            <CardContent className={`rounded-xl pt-4 text-center ${c.cls}`}>
-                                <p className="text-2xl font-bold">{c.value}</p>
-                                <p className="text-sm">{c.label}</p>
-                            </CardContent>
-                        </Card>
-                    ))}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard label="Hadir"  value={stat.hadir}  accent="green"  context={`${stat.rata_rata}% rata-rata`} />
+                    <StatCard label="Alpa"   value={stat.alpa}   accent="red"    context="pertemuan tidak hadir" />
+                    <StatCard label="Izin"   value={stat.izin}   accent="blue"   context="dengan keterangan" />
+                    <StatCard label="Sakit"  value={stat.sakit}  accent="yellow" context="dengan keterangan" />
                 </div>
-                <p className="text-sm text-muted-foreground -mt-2 text-center">
-                    Rata-rata kehadiran: <strong>{stat.rata_rata}%</strong>
-                </p>
 
                 <div className="grid gap-4 md:grid-cols-2">
 

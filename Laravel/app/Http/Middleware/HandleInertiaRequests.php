@@ -43,10 +43,11 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
+                'user'        => $request->user(),
+                'roles'       => $request->user() ? $request->user()->getRoleNames() : [],
                 'permissions' => $request->user() ? $request->user()->getAllPermissions()->map(fn($permission) => [
-                    'id' => $permission->id,
-                    'name' => $permission->name,
+                    'id'         => $permission->id,
+                    'name'       => $permission->name,
                     'guard_name' => $permission->guard_name,
                     'created_at' => $permission->created_at,
                     'updated_at' => $permission->updated_at,

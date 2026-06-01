@@ -63,9 +63,9 @@ class LaporanService
                 $alpa  = (int)($counts['alpa'] ?? 0);
                 $izin  = (int)($counts['izin'] ?? 0);
                 $sakit = (int)($counts['sakit'] ?? 0);
-                $persen = $totalPertemuan > 0 ? round($hadir / $totalPertemuan * 100, 1) : 0;
+                $persen_hadir = $totalPertemuan > 0 ? round($hadir / $totalPertemuan * 100, 1) : 0;
 
-                return compact('hadir', 'alpa', 'izin', 'sakit', 'persen') + [
+                return compact('hadir', 'alpa', 'izin', 'sakit', 'persen_hadir') + [
                     'mahasiswa_id'    => $mhs->id,
                     'nim'             => $mhs->nim,
                     'nama'            => $mhs->nama,
@@ -131,7 +131,7 @@ class LaporanService
             $alpa  = (int)($counts['alpa'] ?? 0);
             $izin  = (int)($counts['izin'] ?? 0);
             $sakit = (int)($counts['sakit'] ?? 0);
-            $persen = round($hadir / $totalPertemuan * 100, 1);
+            $persen_hadir = round($hadir / $totalPertemuan * 100, 1);
 
             return [
                 'mata_kuliah'     => $j->mata_kuliah,
@@ -140,7 +140,7 @@ class LaporanService
                 'izin'            => $izin,
                 'sakit'           => $sakit,
                 'total_pertemuan' => $totalPertemuan,
-                'persen_hadir'    => $persen,
+                'persen_hadir'    => $persen_hadir,
             ];
         })->filter()->values()->toArray();
     }

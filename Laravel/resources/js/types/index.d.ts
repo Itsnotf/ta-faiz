@@ -3,6 +3,7 @@ import { LucideIcon } from 'lucide-react';
 
 export interface Auth {
     user: User;
+    roles: string[];
     permissions: Permission[];
 }
 
@@ -21,6 +22,7 @@ export interface NavItem {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon | null;
     permissions?: string[];
+    roles?: string[];
     isActive?: boolean;
 }
 

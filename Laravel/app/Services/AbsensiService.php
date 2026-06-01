@@ -10,12 +10,10 @@ use Illuminate\Support\Collection;
 
 class AbsensiService
 {
-    /**
-     * Level 1 — Daftar semua jadwal dengan statistik kehadiran.
-     */
+    // ── Level 1: Semua jadwal dengan statistik ─────────────────────────────
     public function getJadwalListWithStats(?int $jurusanId, bool $isSuperAdmin): Collection
     {
-        return Jadwal::with(['kelas.prodi', 'dosen', 'ruangan'])
+        return Jadwal::with(['kelas.prodi', 'kelas.mahasiswa', 'dosen', 'ruangan'])
             ->when(
                 !$isSuperAdmin && $jurusanId,
                 fn($q) => $q->whereHas('kelas.prodi', fn($q2) => $q2->where('jurusan_id', $jurusanId))
@@ -24,26 +22,23 @@ class AbsensiService
             ->get()
             ->map(function ($jadwal) {
                 $totalSesi      = SesiAbsensi::where('jadwal_id', $jadwal->id)->count();
-                $totalMahasiswa = $jadwal->kelas->mahasiswa()->count();
+                $totalMahasiswa = $jadwal->kelas->mahasiswa->count();
+                $persenHadir    = null;
 
-                $totalHadir = 0;
-                $totalRecord = 0;
                 if ($totalSesi > 0 && $totalMahasiswa > 0) {
                     $totalRecord = $totalSesi * $totalMahasiswa;
                     $totalHadir  = AbsensiMahasiswa::whereHas(
                         'sesi', fn($q) => $q->where('jadwal_id', $jadwal->id)
                     )->where('status', 'hadir')->count();
+                    $persenHadir = round($totalHadir / $totalRecord * 100, 1);
                 }
-                $persenHadir = $totalRecord > 0 ? round($totalHadir / $totalRecord * 100, 1) : null;
 
-                $sesiTerakhir = SesiAbsensi::where('jadwal_id', $jadwal->id)
-                    ->latest('tanggal')->first();
+                $sesiTerakhir        = SesiAbsensi::where('jadwal_id', $jadwal->id)->latest('tanggal')->first();
                 $statusDosenTerakhir = null;
                 if ($sesiTerakhir) {
-                    $absensiDosen = AbsensiDosen::where('sesi_id', $sesiTerakhir->id)
-                        ->where('dosen_id', $jadwal->dosen_id)
-                        ->first();
-                    $statusDosenTerakhir = $absensiDosen?->status ?? 'belum';
+                    $adosen = AbsensiDosen::where('sesi_id', $sesiTerakhir->id)
+                        ->where('dosen_id', $jadwal->dosen_id)->first();
+                    $statusDosenTerakhir = $adosen?->status ?? 'belum';
                 }
 
                 return [
@@ -64,12 +59,11 @@ class AbsensiService
             });
     }
 
-    /**
-     * Level 2 — Daftar sesi per jadwal.
-     */
+    // ── Level 2: Semua sesi per jadwal ─────────────────────────────────────
     public function getSesiListByJadwal(Jadwal $jadwal): array
     {
-        $totalMahasiswa = $jadwal->kelas->mahasiswa()->count();
+        $jadwal->loadMissing(['kelas.mahasiswa', 'dosen', 'ruangan']);
+        $totalMahasiswa = $jadwal->kelas->mahasiswa->count();
 
         $sesiList = SesiAbsensi::where('jadwal_id', $jadwal->id)
             ->orderByDesc('tanggal')
@@ -80,15 +74,15 @@ class AbsensiService
                 $izin  = AbsensiMahasiswa::where('sesi_id', $sesi->id)->where('status', 'izin')->count();
                 $sakit = AbsensiMahasiswa::where('sesi_id', $sesi->id)->where('status', 'sakit')->count();
 
-                $absensiDosen = AbsensiDosen::where('sesi_id', $sesi->id)
-                    ->where('dosen_id', $jadwal->dosen_id)
-                    ->first();
+                $adosen = AbsensiDosen::where('sesi_id', $sesi->id)
+                    ->where('dosen_id', $jadwal->dosen_id)->first();
+
+                $tgl    = $sesi->tanggal;
+                $tglStr = ($tgl instanceof \Carbon\Carbon) ? $tgl->format('Y-m-d') : (string) $tgl;
 
                 return [
                     'id'             => $sesi->id,
-                    'tanggal'        => $sesi->tanggal instanceof \Carbon\Carbon
-                        ? $sesi->tanggal->format('Y-m-d')
-                        : (string) $sesi->tanggal,
+                    'tanggal'        => $tglStr,
                     'status'         => $sesi->status,
                     'hadir'          => $hadir,
                     'alpa'           => $alpa,
@@ -96,8 +90,8 @@ class AbsensiService
                     'sakit'          => $sakit,
                     'total'          => $totalMahasiswa,
                     'persen_hadir'   => $totalMahasiswa > 0 ? round($hadir / $totalMahasiswa * 100, 1) : 0,
-                    'status_dosen'   => $absensiDosen?->status ?? 'belum',
-                    'dosen_hadir_at' => $absensiDosen?->hadir_at?->format('H:i'),
+                    'status_dosen'   => $adosen?->status ?? 'belum',
+                    'dosen_hadir_at' => $adosen?->hadir_at?->format('H:i'),
                 ];
             });
 
@@ -119,55 +113,50 @@ class AbsensiService
         ];
     }
 
-    /**
-     * Level 3 — Detail satu sesi: daftar mahasiswa + status dosen.
-     */
+    // ── Level 3: Detail satu sesi ───────────────────────────────────────────
     public function getSesiDetail(SesiAbsensi $sesi): array
     {
         $jadwal = $sesi->jadwal()->with(['kelas.mahasiswa', 'dosen', 'ruangan'])->first();
 
-        $absensiDosen = AbsensiDosen::where('sesi_id', $sesi->id)
-            ->where('dosen_id', $jadwal->dosen_id)
-            ->first();
+        $adosen = AbsensiDosen::where('sesi_id', $sesi->id)
+            ->where('dosen_id', $jadwal->dosen_id)->first();
 
         $statusDosen = [
             'nama'       => $jadwal->dosen->nama ?? '-',
-            'status'     => $absensiDosen?->status ?? 'belum',
-            'hadir_at'   => $absensiDosen?->hadir_at?->format('H:i'),
-            'confidence' => $absensiDosen?->confidence
-                ? round($absensiDosen->confidence * 100, 1) : null,
-            'is_locked'  => $absensiDosen?->is_locked ?? false,
+            'status'     => $adosen?->status ?? 'belum',
+            'hadir_at'   => $adosen?->hadir_at?->format('H:i'),
+            'confidence' => $adosen?->confidence ? round($adosen->confidence * 100, 1) : null,
+            'is_locked'  => $adosen?->is_locked ?? false,
         ];
 
         $mahasiswaKelas = $jadwal->kelas->mahasiswa ?? collect();
-        $absensiMap     = AbsensiMahasiswa::where('sesi_id', $sesi->id)
-            ->get()->keyBy('mahasiswa_id');
+        $absensiMap     = AbsensiMahasiswa::where('sesi_id', $sesi->id)->get()->keyBy('mahasiswa_id');
 
         $mahasiswaList = $mahasiswaKelas->map(function ($mhs) use ($absensiMap) {
-            $absensi = $absensiMap->get($mhs->id);
+            $ab = $absensiMap->get($mhs->id);
             return [
                 'mahasiswa_id' => $mhs->id,
                 'nim'          => $mhs->nim,
                 'nama'         => $mhs->nama,
-                'status'       => $absensi?->status ?? 'belum',
-                'hadir_at'     => $absensi?->hadir_at?->format('H:i:s'),
-                'confidence'   => $absensi?->confidence
-                    ? round($absensi->confidence * 100, 1) : null,
-                'is_locked'    => $absensi?->is_locked ?? false,
+                'status'       => $ab?->status ?? 'belum',
+                'hadir_at'     => $ab?->hadir_at?->format('H:i:s'),
+                'confidence'   => $ab?->confidence ? round($ab->confidence * 100, 1) : null,
+                'is_locked'    => $ab?->is_locked ?? false,
             ];
         })->sortBy('nama')->values();
 
+        $tgl    = $sesi->tanggal;
+        $tglStr = ($tgl instanceof \Carbon\Carbon) ? $tgl->format('Y-m-d') : (string) $tgl;
+
         return [
-            'sesi' => [
+            'sesi'          => [
                 'id'         => $sesi->id,
-                'tanggal'    => $sesi->tanggal instanceof \Carbon\Carbon
-                    ? $sesi->tanggal->format('Y-m-d')
-                    : (string) $sesi->tanggal,
+                'tanggal'    => $tglStr,
                 'status'     => $sesi->status,
                 'mulai_at'   => $sesi->mulai_at?->format('H:i'),
                 'selesai_at' => $sesi->selesai_at?->format('H:i'),
             ],
-            'jadwal' => [
+            'jadwal'        => [
                 'id'          => $jadwal->id,
                 'mata_kuliah' => $jadwal->mata_kuliah,
                 'kelas'       => $jadwal->kelas->nama ?? '-',

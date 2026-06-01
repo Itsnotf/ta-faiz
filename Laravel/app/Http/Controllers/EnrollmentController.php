@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Dosen;
-use App\Models\EnrollmentVerifikasi;
 use App\Models\Kelas;
 use App\Models\Mahasiswa;
 use App\Services\EnrollmentService;
@@ -53,15 +52,13 @@ class EnrollmentController extends Controller
 
     public function detail(Mahasiswa $mahasiswa)
     {
-        $verifikasi = EnrollmentVerifikasi::where('mahasiswa_id', $mahasiswa->id)
-            ->pluck('confidence', 'jarak')
-            ->toArray();
+        $statusData = $this->enrollmentService->status($mahasiswa);
 
         $fotoPreviews = [];
         if ($mahasiswa->foto_paths) {
             foreach ($mahasiswa->foto_paths as $i => $path) {
                 $fotoPreviews[] = [
-                    'index' => $i + 1,
+                    'index' => $i,
                     'url'   => route('enrollment.foto-preview', ['mahasiswa' => $mahasiswa->id, 'index' => $i]),
                 ];
             }
@@ -70,8 +67,8 @@ class EnrollmentController extends Controller
         return inertia('enrollment/detail', [
             'mahasiswa'     => $mahasiswa->load('kelas'),
             'foto_previews' => $fotoPreviews,
-            'jarak_lulus'   => $verifikasi,
-            'semua_lulus'   => count($verifikasi) >= 3,
+            'jarak_lulus'   => $statusData['jarak_lulus'],
+            'semua_lulus'   => $statusData['semua_jarak_lulus'],
             'status_akun'   => $mahasiswa->status_akun,
         ]);
     }

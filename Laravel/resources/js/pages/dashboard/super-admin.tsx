@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { StatCard } from '@/components/stat-card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
@@ -77,22 +78,10 @@ export default function SuperAdminDashboard({
 
                 {/* Stat Cards */}
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                    {[
-                        { title: 'Mahasiswa Aktif',   value: totalMahasiswaAktif, icon: GraduationCap, cls: 'text-blue-600' },
-                        { title: 'Rata Kehadiran',    value: `${rataKehadiran}%`, icon: TrendingUp,    cls: 'text-green-600' },
-                        { title: 'Sesi Hari Ini',     value: sesiHariIni,         icon: BookOpen,      cls: 'text-purple-600' },
-                        { title: 'Berlangsung',       value: sesiBerlangsung,     icon: Users,         cls: 'text-orange-600' },
-                    ].map(({ title, value, icon: Icon, cls }) => (
-                        <Card key={title}>
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-                                <Icon className={`h-5 w-5 ${cls}`} />
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-3xl font-bold">{value}</p>
-                            </CardContent>
-                        </Card>
-                    ))}
+                    <StatCard label="Mahasiswa Aktif" value={totalMahasiswaAktif} accent="green"  icon={GraduationCap} context="enrollment aktif" />
+                    <StatCard label="Rata Kehadiran"  value={`${rataKehadiran}%`} accent="blue"   icon={TrendingUp}    context="semua jurusan" />
+                    <StatCard label="Sesi Hari Ini"   value={sesiHariIni}         accent="purple" icon={BookOpen}      context="pertemuan hari ini" />
+                    <StatCard label="Berlangsung"     value={sesiBerlangsung}     accent="orange" icon={Users}         context="sesi aktif sekarang" />
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">

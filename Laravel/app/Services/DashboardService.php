@@ -274,42 +274,48 @@ class DashboardService
         )->where('status_akun', 'aktif')->count();
 
         // Statistik dosen hari ini
-        $hariMap2 = [0 => 'minggu', 1 => 'senin', 2 => 'selasa', 3 => 'rabu', 4 => 'kamis', 5 => 'jumat', 6 => 'sabtu'];
-        $hariIniDosen = $hariMap2[now('Asia/Jakarta')->dayOfWeek];
+        $hariMap2   = [0 => 'minggu', 1 => 'senin', 2 => 'selasa', 3 => 'rabu', 4 => 'kamis', 5 => 'jumat', 6 => 'sabtu'];
+        $hariIniStr = $hariMap2[now('Asia/Jakarta')->dayOfWeek];
 
-        $jadwalHariIniDosen = Jadwal::where('hari', $hariIniDosen)
+        $jadwalDosenHariIni = Jadwal::where('hari', $hariIniStr)
             ->where('is_active', true)
             ->whereHas('kelas.prodi', fn($q) => $q->where('jurusan_id', $jid))
             ->with(['dosen', 'kelas'])
             ->get();
 
-        $dosenHadirHariIni    = 0;
-        $dosenTidakHadirHariIni = [];
+        $dosenHadirList     = [];
+        $dosenBelumHadirList = [];
 
-        foreach ($jadwalHariIniDosen as $jadwalDosen) {
-            $sesiHariIni = SesiAbsensi::where('jadwal_id', $jadwalDosen->id)
+        foreach ($jadwalDosenHariIni as $jdl) {
+            $sesiHariIni = SesiAbsensi::where('jadwal_id', $jdl->id)
                 ->whereDate('tanggal', today())->first();
 
+            $statusDosen = 'belum';
             if ($sesiHariIni) {
-                $absensiDosen = AbsensiDosen::where('sesi_id', $sesiHariIni->id)
-                    ->where('dosen_id', $jadwalDosen->dosen_id)->first();
+                $ab = AbsensiDosen::where('sesi_id', $sesiHariIni->id)
+                    ->where('dosen_id', $jdl->dosen_id)->first();
+                $statusDosen = $ab?->status ?? 'belum';
+            }
 
-                if ($absensiDosen && $absensiDosen->status === 'hadir') {
-                    $dosenHadirHariIni++;
-                } else {
-                    $dosenTidakHadirHariIni[] = [
-                        'nama'        => $jadwalDosen->dosen->nama ?? '-',
-                        'mata_kuliah' => $jadwalDosen->mata_kuliah,
-                        'kelas'       => $jadwalDosen->kelas->nama ?? '-',
-                    ];
-                }
+            $entry = [
+                'nama'        => $jdl->dosen->nama ?? '-',
+                'mata_kuliah' => $jdl->mata_kuliah,
+                'kelas'       => $jdl->kelas->nama ?? '-',
+                'jam_mulai'   => substr($jdl->jam_mulai, 0, 5),
+                'jam_selesai' => substr($jdl->jam_selesai, 0, 5),
+            ];
+
+            if ($statusDosen === 'hadir') {
+                $dosenHadirList[] = $entry;
+            } else {
+                $dosenBelumHadirList[] = $entry;
             }
         }
 
         $statDosenHariIni = [
-            'total_jadwal' => $jadwalHariIniDosen->count(),
-            'hadir'        => $dosenHadirHariIni,
-            'tidak_hadir'  => $dosenTidakHadirHariIni,
+            'total'       => $jadwalDosenHariIni->count(),
+            'hadir'       => count($dosenHadirList),
+            'belum_hadir' => $dosenBelumHadirList,
         ];
 
         $sesiAktif = SesiAbsensi::where('status', 'berlangsung')

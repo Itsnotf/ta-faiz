@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { StatCard } from '@/components/stat-card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
@@ -86,25 +87,25 @@ export default function DosenDashboard({ dosen, jadwal_hari_ini, absensi_stats }
                 </div>
 
                 {/* Stat Cards */}
-                <div className="grid grid-cols-3 gap-3">
-                    <Card>
-                        <CardContent className="rounded-xl pt-4 text-center bg-green-50 text-green-700">
-                            <p className="text-2xl font-bold">{hadirCount}</p>
-                            <p className="text-sm">Hadir Bulan Ini</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="rounded-xl pt-4 text-center bg-red-50 text-red-700">
-                            <p className="text-2xl font-bold">{alpaCount}</p>
-                            <p className="text-sm">Alpa Bulan Ini</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className={`rounded-xl pt-4 text-center ${pctHadir >= 80 ? 'bg-green-50 text-green-700' : pctHadir >= 75 ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>
-                            <p className="text-2xl font-bold">{pctHadir}%</p>
-                            <p className="text-sm">Kehadiran</p>
-                        </CardContent>
-                    </Card>
+                <div className="grid grid-cols-3 gap-4">
+                    <StatCard
+                        label="Hadir Bulan Ini"
+                        value={hadirCount}
+                        accent="green"
+                        context={`dari ${totalCount} sesi`}
+                    />
+                    <StatCard
+                        label="Alpa Bulan Ini"
+                        value={alpaCount}
+                        accent="red"
+                        context="sesi tidak hadir"
+                    />
+                    <StatCard
+                        label="Kehadiran"
+                        value={totalCount > 0 ? `${pctHadir}%` : '—'}
+                        accent={pctHadir >= 80 ? 'green' : pctHadir >= 75 ? 'yellow' : 'red'}
+                        context="persentase bulan ini"
+                    />
                 </div>
 
                 {/* Jadwal Hari Ini */}

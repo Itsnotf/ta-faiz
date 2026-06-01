@@ -4,7 +4,7 @@
 ---
 
 ## Status Terakhir
-**Task aktif:** — SEMUA TASK UX REDESIGN SELESAI —
+**Task aktif:** — SEMUA TASK TASK_LIST_FINAL.md (BATCH 1 + BATCH 2) SELESAI —
 **Terakhir diupdate:** 2026-06-02
 
 ---
@@ -487,6 +487,44 @@ Selama belum jam 23:10, kamera memang harus tetap terbuka.
 | UX-C03 | Dashboard Mahasiswa — Frontend | ✅ Selesai |
 | UX-D01 | Sidebar — Restrukturisasi | ✅ Selesai |
 | UX-E01 | npm run build — verifikasi | ✅ Selesai |
+
+---
+
+## TASK_LIST_FINAL.md — Batch 1 & 2 (2026-06-02)
+
+| Task | Nama | Status |
+|------|------|--------|
+| FIX-001 | Bug persen vs persen_hadir di LaporanService | ✅ Selesai |
+| FIX-002 | Bug Sidebar Super Admin 404 (roles system) | ✅ Selesai |
+| FIX-003 | Bug window_dosen_menit (sudah selesai sesi sebelumnya) | ✅ Skip |
+| UX-A01 | Rekap Absensi Backend — update AbsensiService eager load | ✅ Selesai |
+| UX-A02 | Rekap Absensi Level 1 Frontend — p-6, bg-muted/40 | ✅ Selesai |
+| UX-A03 | Rekap Absensi Level 2 Frontend — border-l-4 cards | ✅ Selesai |
+| UX-A04 | Rekap Absensi Level 3 Frontend — border-l-4 dosen card | ✅ Selesai |
+| UX-B01 | Enrollment Backend — detail() pakai status(), auto-approve | ✅ Selesai |
+| UX-B02 | Enrollment Frontend — Tabs baru, detail.tsx jarak_lulus string[] | ✅ Selesai |
+| UX-C01 | StatCard component baru | ✅ Selesai |
+| UX-C02 | Dashboard Admin Jurusan — StatCard + belum_hadir structure | ✅ Selesai |
+| UX-C03 | Dashboard Mahasiswa — StatCard + border-l-4 warning | ✅ Selesai |
+| UX-C04 | Dashboard Dosen + Super Admin — StatCard | ✅ Selesai |
+| UX-D01 | Sidebar — roles field, enrollmentItems baru | ✅ Selesai |
+| UX-E01 | npm run build — 3420 modules, 0 errors, 127s | ✅ Selesai |
+
+### Catatan Teknis Penting
+
+**FIX-001:** `LaporanService::rekapKelas()` — rename `$persen` → `$persen_hadir` + update `compact()`. `rekapMahasiswa()` sama.
+
+**FIX-002 (Roles System):**
+- `HandleInertiaRequests::share()` — tambah `'roles' => $request->user()->getRoleNames()`
+- `types/index.d.ts` — tambah `roles: string[]` ke `Auth` + `roles?: string[]` ke `NavItem`
+- `nav-main.tsx` — `canSee(item)` sekarang cek `item.roles` dulu (harus match salah satu), lalu cek `item.permissions`
+- `app-sidebar.tsx` — `dosenItems` pakai `roles: ['dosen']` → Super Admin tidak melihat menu Enrollment Wajah + Koreksi Absensi dosen
+
+**UX-C01 StatCard:** `resources/js/components/stat-card.tsx` — Card dengan `border-l-4 {color}`, angka besar berwarna sesuai accent, context text bawah. Dipakai di semua 4 dashboard.
+
+**UX-C02 DashboardService:** `statDosenHariIni` key berubah dari `total_jadwal`/`tidak_hadir` → `total`/`belum_hadir`. Tambah `jam_mulai`/`jam_selesai` di setiap entry.
+
+**UX-B01 EnrollmentController::detail():** Sekarang pakai `$this->enrollmentService->status()` yang return `jarak_lulus` sebagai `string[]` (bukan `Record<string, float>`). `enrollment/detail.tsx` pakai `.includes()` bukan `[key] !== undefined`.
 
 ---
 
