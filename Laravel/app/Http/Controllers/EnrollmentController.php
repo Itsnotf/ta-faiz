@@ -203,4 +203,42 @@ class EnrollmentController extends Controller
         $this->enrollmentService->reset($mahasiswa);
         return back()->with('success', 'Enrollment berhasil direset.');
     }
+
+    public function selfStatusPage(Request $request)
+    {
+        $mahasiswa = $request->user()->mahasiswa;
+        if (!$mahasiswa) abort(404);
+
+        $statusData = $this->enrollmentService->status($mahasiswa);
+
+        $fotoPreviews = [];
+        if ($mahasiswa->foto_paths) {
+            foreach ($mahasiswa->foto_paths as $i => $path) {
+                $fotoPreviews[] = [
+                    'index' => $i,
+                    'url'   => route('enrollment.self-foto-preview', ['index' => $i]),
+                ];
+            }
+        }
+
+        return inertia('enrollment/self-status', [
+            'mahasiswa'     => ['nama' => $mahasiswa->nama, 'nim' => $mahasiswa->nim],
+            'foto_previews' => $fotoPreviews,
+            'jarak_lulus'   => $statusData['jarak_lulus'],
+            'semua_lulus'   => $statusData['semua_jarak_lulus'],
+            'status_akun'   => $mahasiswa->status_akun,
+        ]);
+    }
+
+    public function selfFotoPreview(Request $request, int $index)
+    {
+        $mahasiswa = $request->user()->mahasiswa;
+        if (!$mahasiswa) abort(404);
+
+        abort_unless($mahasiswa->foto_paths && isset($mahasiswa->foto_paths[$index]), 404);
+        $path = $mahasiswa->foto_paths[$index];
+        abort_unless(Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response($path);
+    }
 }

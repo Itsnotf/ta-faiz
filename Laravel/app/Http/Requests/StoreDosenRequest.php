@@ -17,7 +17,11 @@ class StoreDosenRequest extends FormRequest
             'jurusan_id' => ['required', 'exists:jurusan,id'],
             'nip'        => ['required', 'string', 'max:50', 'unique:dosen,nip'],
             'nama'       => ['required', 'string', 'max:255'],
-            'email'      => ['required', 'email', 'max:255', 'unique:dosen,email'],
+            'email'      => [
+                'required', 'email', 'max:255',
+                'unique:dosen,email',
+                'unique:users,email',
+            ],
         ];
     }
 }

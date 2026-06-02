@@ -40,6 +40,9 @@ export default function Profile({
                         title="Profile information"
                         description="Update your name and email address"
                     />
+                    <p className="text-xs text-muted-foreground">
+                        Perubahan nama dan email akan otomatis tersinkron dengan data akademik Anda.
+                    </p>
 
                     <Form
                         {...ProfileController.update.form()}

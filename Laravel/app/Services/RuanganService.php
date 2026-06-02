@@ -9,11 +9,12 @@ use Illuminate\Support\Collection;
 
 class RuanganService
 {
-    public function index(?string $search, ?int $jurusanId, bool $isSuperAdmin): LengthAwarePaginator
+    public function index(?string $search, ?string $filterJurusanId, ?int $jurusanId, bool $isSuperAdmin): LengthAwarePaginator
     {
         return Ruangan::query()
             ->with('jurusan')
             ->when(!$isSuperAdmin && $jurusanId, fn($q) => $q->where('jurusan_id', $jurusanId))
+            ->when($filterJurusanId, fn($q) => $q->where('jurusan_id', $filterJurusanId))
             ->when($search, fn($q) => $q->where('nama', 'like', "%{$search}%"))
             ->latest()
             ->paginate(config('starterkit.pagination'))

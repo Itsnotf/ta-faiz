@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -6,15 +7,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import hasAnyPermission from '@/lib/utils';
-import { type BreadcrumbItem, type Dosen, type Jurusan } from '@/types';
+import { type BreadcrumbItem, type Jurusan } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Pencil, PlusCircle } from 'lucide-react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+interface DosenItem {
+    id: number; nip: string; nama: string; email: string;
+    jurusan_id: number; jurusan?: { nama: string };
+    status_enrollment: 'pending_upload' | 'pending_verifikasi' | 'aktif';
+}
+
 interface Props {
-    dosen: { data: Dosen[]; links: any[] };
+    dosen: { data: DosenItem[]; links: any[] };
     jurusan: Jurusan[];
     filters: { search?: string };
     flash?: { success?: string };
@@ -26,7 +33,7 @@ export default function DosenPage({ dosen, jurusan, filters, flash }: Props) {
     const [search, setSearch] = useState(filters.search ?? '');
     const [openCreate, setOpenCreate] = useState(false);
     const [openEdit, setOpenEdit] = useState(false);
-    const [editTarget, setEditTarget] = useState<Dosen | null>(null);
+    const [editTarget, setEditTarget] = useState<DosenItem | null>(null);
     const [shownMessages] = useState(new Set<string>());
 
     useEffect(() => {
@@ -39,7 +46,7 @@ export default function DosenPage({ dosen, jurusan, filters, flash }: Props) {
     const createForm = useForm({ jurusan_id: '', nip: '', nama: '', email: '' });
     const editForm   = useForm({ jurusan_id: '', nip: '', nama: '', email: '', _method: 'PUT' });
 
-    function openEditDialog(item: Dosen) {
+    function openEditDialog(item: DosenItem) {
         setEditTarget(item);
         editForm.setData({ jurusan_id: String(item.jurusan_id), nip: item.nip, nama: item.nama, email: item.email, _method: 'PUT' });
         setOpenEdit(true);
@@ -107,18 +114,32 @@ export default function DosenPage({ dosen, jurusan, filters, flash }: Props) {
                             <TableHead>Nama</TableHead>
                             <TableHead>Email</TableHead>
                             <TableHead>Jurusan</TableHead>
+                            <TableHead>Status Enrollment</TableHead>
                             <TableHead className="w-24">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {dosen.data.length === 0 ? (
-                            <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-10">Belum ada data dosen.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">Belum ada data dosen.</TableCell></TableRow>
                         ) : dosen.data.map(item => (
                             <TableRow key={item.id}>
                                 <TableCell className="font-mono text-sm">{item.nip}</TableCell>
                                 <TableCell className="font-medium">{item.nama}</TableCell>
                                 <TableCell className="text-sm text-muted-foreground">{item.email}</TableCell>
                                 <TableCell className="text-sm">{item.jurusan?.nama ?? '-'}</TableCell>
+                                <TableCell>
+                                    <Badge variant="outline" className={
+                                        item.status_enrollment === 'aktif'
+                                            ? 'bg-green-50 text-green-700 border-green-200 text-xs'
+                                            : item.status_enrollment === 'pending_verifikasi'
+                                            ? 'bg-blue-50 text-blue-700 border-blue-200 text-xs'
+                                            : 'bg-gray-50 text-gray-600 border-gray-200 text-xs'
+                                    }>
+                                        {item.status_enrollment === 'aktif' ? 'Aktif'
+                                            : item.status_enrollment === 'pending_verifikasi' ? 'Verifikasi'
+                                            : 'Belum Upload'}
+                                    </Badge>
+                                </TableCell>
                                 <TableCell className="flex gap-1">
                                     {hasAnyPermission(['dosen edit']) && (
                                         <Button variant="outline" size="sm" onClick={() => openEditDialog(item)}><Pencil className="size-3.5" /></Button>

@@ -7,23 +7,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import hasAnyPermission from '@/lib/utils';
-import { type BreadcrumbItem, type Kelas, type Mahasiswa } from '@/types';
+import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Pencil, PlusCircle } from 'lucide-react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+interface MahasiswaItem {
+    id: number; nim: string; nama: string; email: string | null;
+    kelas_id: number;
+    status_akun: 'pending_upload' | 'pending_verifikasi' | 'aktif';
+    kelas?: { id: number; nama: string; prodi?: { nama: string } };
+}
+
+interface KelasOption {
+    id: number; nama: string; prodi_id: number;
+    prodi?: { nama: string };
+}
+
 interface Props {
-    mahasiswa: { data: Mahasiswa[]; links: any[] };
-    kelas: Kelas[];
-    filters: { search?: string };
+    mahasiswa: { data: MahasiswaItem[]; links: any[] };
+    kelas: KelasOption[];
+    filters: { search?: string; kelas_id?: string };
     flash?: { success?: string };
 }
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Mahasiswa', href: '/mahasiswa' }];
 
-const statusBadge = (status: Mahasiswa['status_akun']) => {
+const statusBadge = (status: MahasiswaItem['status_akun']) => {
     const map = {
         pending_upload:     { label: 'Pending Upload',     className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
         pending_verifikasi: { label: 'Pending Verifikasi', className: 'bg-orange-100 text-orange-800 border-orange-200' },
@@ -37,7 +49,7 @@ export default function MahasiswaPage({ mahasiswa, kelas, filters, flash }: Prop
     const [search, setSearch] = useState(filters.search ?? '');
     const [openCreate, setOpenCreate] = useState(false);
     const [openEdit, setOpenEdit] = useState(false);
-    const [editTarget, setEditTarget] = useState<Mahasiswa | null>(null);
+    const [editTarget, setEditTarget] = useState<MahasiswaItem | null>(null);
     const [shownMessages] = useState(new Set<string>());
 
     useEffect(() => {
@@ -47,12 +59,18 @@ export default function MahasiswaPage({ mahasiswa, kelas, filters, flash }: Prop
         }
     }, [flash?.success]);
 
-    const createForm = useForm({ kelas_id: '', nim: '', nama: '' });
-    const editForm   = useForm({ kelas_id: '', nim: '', nama: '', _method: 'PUT' });
+    const createForm = useForm({ kelas_id: '', nim: '', nama: '', email: '' });
+    const editForm   = useForm({ kelas_id: '', nim: '', nama: '', email: '', _method: 'PUT' });
 
-    function openEditDialog(item: Mahasiswa) {
+    function openEditDialog(item: MahasiswaItem) {
         setEditTarget(item);
-        editForm.setData({ kelas_id: String(item.kelas_id), nim: item.nim, nama: item.nama, _method: 'PUT' });
+        editForm.setData({
+            kelas_id: String(item.kelas_id),
+            nim: item.nim,
+            nama: item.nama,
+            email: item.email ?? '',
+            _method: 'PUT',
+        });
         setOpenEdit(true);
     }
 
@@ -67,7 +85,7 @@ export default function MahasiswaPage({ mahasiswa, kelas, filters, flash }: Prop
         editForm.post(`/mahasiswa/${editTarget.id}`, { onSuccess: () => setOpenEdit(false) });
     }
 
-    const FormFields = ({ form }: { form: typeof createForm }) => (
+    const FormFields = ({ form }: { form: any }) => (
         <>
             <div className="space-y-1">
                 <Label>Kelas <span className="text-red-500">*</span></Label>
@@ -95,11 +113,14 @@ export default function MahasiswaPage({ mahasiswa, kelas, filters, flash }: Prop
                     {form.errors.nama && <p className="text-xs text-red-500">{form.errors.nama}</p>}
                 </div>
             </div>
-            {('nim' in form.data) && (
-                <p className="text-xs text-muted-foreground">
-                    Login email otomatis: <code className="bg-muted px-1 rounded">{form.data.nim || 'nim'}@mhs.demo.id</code> — password: <code className="bg-muted px-1 rounded">Password@123</code>
-                </p>
-            )}
+            <div className="space-y-1">
+                <Label>Email <span className="text-red-500">*</span></Label>
+                <Input type="email" value={form.data.email} onChange={e => form.setData('email', e.target.value)} />
+                {form.errors.email && <p className="text-xs text-red-500">{form.errors.email}</p>}
+            </div>
+            <p className="text-xs text-muted-foreground">
+                Password default: <code className="bg-muted px-1 rounded">Password@123</code>
+            </p>
         </>
     );
 
@@ -107,11 +128,33 @@ export default function MahasiswaPage({ mahasiswa, kelas, filters, flash }: Prop
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Mahasiswa" />
             <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between gap-2">
-                    <form onSubmit={e => { e.preventDefault(); router.get('/mahasiswa', { search }, { preserveState: true }); }} className="flex gap-2 w-full max-w-xs">
-                        <Input placeholder="Cari nama / NIM..." value={search} onChange={e => setSearch(e.target.value)} />
-                        <Button variant="outline" type="submit">Cari</Button>
-                    </form>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap">
+                        <form onSubmit={e => {
+                            e.preventDefault();
+                            router.get('/mahasiswa', { search, kelas_id: filters.kelas_id }, { preserveState: true });
+                        }} className="flex gap-2">
+                            <Input placeholder="Cari nama / NIM..." value={search} onChange={e => setSearch(e.target.value)} className="w-48" />
+                            <Button variant="outline" type="submit">Cari</Button>
+                        </form>
+                        <Select value={filters.kelas_id ?? ''}
+                            onValueChange={val => {
+                                const p = val && val !== 'all' ? { kelas_id: val } : {};
+                                router.get('/mahasiswa', p, { preserveState: true });
+                            }}>
+                            <SelectTrigger className="w-56">
+                                <SelectValue placeholder="Semua Kelas" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Kelas</SelectItem>
+                                {kelas.map(k => (
+                                    <SelectItem key={k.id} value={String(k.id)}>
+                                        {k.nama}{k.prodi ? ` — ${k.prodi.nama}` : ''}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     {hasAnyPermission(['mahasiswa create']) && (
                         <Button onClick={() => setOpenCreate(true)}><PlusCircle className="mr-2 size-4" /> Tambah</Button>
                     )}
@@ -122,6 +165,7 @@ export default function MahasiswaPage({ mahasiswa, kelas, filters, flash }: Prop
                         <TableRow>
                             <TableHead>NIM</TableHead>
                             <TableHead>Nama</TableHead>
+                            <TableHead>Email</TableHead>
                             <TableHead>Kelas</TableHead>
                             <TableHead>Status Akun</TableHead>
                             <TableHead className="w-24">Aksi</TableHead>
@@ -129,11 +173,12 @@ export default function MahasiswaPage({ mahasiswa, kelas, filters, flash }: Prop
                     </TableHeader>
                     <TableBody>
                         {mahasiswa.data.length === 0 ? (
-                            <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-10">Belum ada data mahasiswa.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">Belum ada data mahasiswa.</TableCell></TableRow>
                         ) : mahasiswa.data.map(item => (
                             <TableRow key={item.id}>
                                 <TableCell className="font-mono text-sm">{item.nim}</TableCell>
                                 <TableCell className="font-medium">{item.nama}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground">{item.email ?? '—'}</TableCell>
                                 <TableCell className="text-sm">{item.kelas?.nama ?? '-'} {item.kelas?.prodi ? `— ${item.kelas.prodi.nama}` : ''}</TableCell>
                                 <TableCell>{statusBadge(item.status_akun)}</TableCell>
                                 <TableCell className="flex gap-1">
@@ -178,7 +223,7 @@ export default function MahasiswaPage({ mahasiswa, kelas, filters, flash }: Prop
                 <DialogContent>
                     <DialogHeader><DialogTitle>Edit Mahasiswa</DialogTitle></DialogHeader>
                     <form onSubmit={handleEdit} className="space-y-4">
-                        <FormFields form={editForm as any} />
+                        <FormFields form={editForm} />
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Batal</Button>
                             <Button type="submit" disabled={editForm.processing}>Simpan</Button>

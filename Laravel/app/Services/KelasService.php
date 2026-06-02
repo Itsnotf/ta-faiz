@@ -9,12 +9,16 @@ use Illuminate\Support\Collection;
 
 class KelasService
 {
-    public function index(?string $search, ?int $jurusanId, bool $isSuperAdmin): LengthAwarePaginator
+    public function index(?string $search, ?string $angkatan, ?int $jurusanId, bool $isSuperAdmin): LengthAwarePaginator
     {
         return Kelas::query()
-            ->with('prodi.jurusan')
-            ->when(!$isSuperAdmin && $jurusanId, fn($q) => $q->whereHas('prodi', fn($q2) => $q2->where('jurusan_id', $jurusanId)))
+            ->with(['prodi.jurusan'])
+            ->withCount('mahasiswa')
+            ->when(!$isSuperAdmin && $jurusanId, fn($q) =>
+                $q->whereHas('prodi', fn($q2) => $q2->where('jurusan_id', $jurusanId))
+            )
             ->when($search, fn($q) => $q->where('nama', 'like', "%{$search}%"))
+            ->when($angkatan, fn($q) => $q->where('angkatan', $angkatan))
             ->latest()
             ->paginate(config('starterkit.pagination'))
             ->withQueryString();

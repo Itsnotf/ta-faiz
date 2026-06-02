@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 interface Props {
     ruangan: { data: Ruangan[]; links: any[] };
     jurusan: Jurusan[];
-    filters: { search?: string };
+    filters: { search?: string; jurusan_id?: string };
     flash?: { success?: string };
 }
 
@@ -99,11 +99,28 @@ export default function RuanganPage({ ruangan, jurusan, filters, flash }: Props)
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Ruangan" />
             <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between gap-2">
-                    <form onSubmit={e => { e.preventDefault(); router.get('/ruangan', { search }, { preserveState: true }); }} className="flex gap-2 w-full max-w-xs">
-                        <Input placeholder="Cari ruangan..." value={search} onChange={e => setSearch(e.target.value)} />
-                        <Button variant="outline" type="submit">Cari</Button>
-                    </form>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap">
+                        <form onSubmit={e => { e.preventDefault(); router.get('/ruangan', { search, jurusan_id: filters.jurusan_id }, { preserveState: true }); }} className="flex gap-2">
+                            <Input placeholder="Cari ruangan..." value={search} onChange={e => setSearch(e.target.value)} className="w-48" />
+                            <Button variant="outline" type="submit">Cari</Button>
+                        </form>
+                        <Select value={filters.jurusan_id ?? ''}
+                            onValueChange={val => {
+                                const p = val && val !== 'all' ? { jurusan_id: val } : {};
+                                router.get('/ruangan', p, { preserveState: true });
+                            }}>
+                            <SelectTrigger className="w-48">
+                                <SelectValue placeholder="Semua Jurusan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Jurusan</SelectItem>
+                                {jurusan.map(j => (
+                                    <SelectItem key={j.id} value={String(j.id)}>{j.nama}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     {hasAnyPermission(['ruangan create']) && (
                         <Button onClick={() => setOpenCreate(true)}><PlusCircle className="mr-2 size-4" /> Tambah</Button>
                     )}

@@ -4,8 +4,9 @@
 ---
 
 ## Status Terakhir
-**Task aktif:** — SEMUA TASK TASK_LIST_FINAL.md (BATCH 1 + BATCH 2) SELESAI —
+**Task aktif:** — SEMUA TASK TASK_LIST_BATCH3.md SELESAI —
 **Terakhir diupdate:** 2026-06-02
+**Build:** 3423 modules, 0 errors
 
 ---
 
@@ -597,7 +598,57 @@ Selama belum jam 23:10, kamera memang harus tetap terbuka.
 
 ---
 
+---
+
+## TASK_LIST_BATCH3.md — Arsitektur, Data Isolation & Enhancement (2026-06-02)
+
+| Task | Nama | Status |
+|------|------|--------|
+| ARCH-001 | 3 Migrations baru (admin_jurusan, email mahasiswa, hapus jurusan_id users) | ✅ Selesai |
+| ARCH-002 | Models update (AdminJurusan baru, User.php rewrite, Mahasiswa.$fillable, HandleInertiaRequests eager-load) | ✅ Selesai |
+| ARCH-003 | RoleSeeder — tambah exclude jurusan permissions untuk admin_jurusan | ✅ Selesai |
+| ARCH-004 | UserSeeder + MasterDataSeeder rombak total — AdminJurusan records, dosen auto-user, mahasiswa+email | ✅ Selesai |
+| ARCH-005 | DosenService — store() auto-create User + syncRoles, destroy() hapus User juga | ✅ Selesai |
+| ARCH-006 | MahasiswaService — store()/update() pakai email, filter kelas_id di index() | ✅ Selesai |
+| ARCH-007 | AdminJurusanController baru + routes/web.php | ✅ Selesai |
+| ARCH-008 | admin-jurusan/index.tsx (CRUD halaman) + sidebar Admin Jurusan + Status Enrollment mahasiswa | ✅ Selesai |
+| CRUD-001 | dosen/index.tsx — kolom Status Enrollment (badge warna) | ✅ Selesai |
+| CRUD-002 | kelas/index.tsx — filter angkatan + button mahasiswa + halaman mahasiswa-list.tsx | ✅ Selesai |
+| CRUD-003 | mahasiswa/index.tsx — email di form+tabel, filter kelas dropdown | ✅ Selesai |
+| CRUD-004 | ruangan/index.tsx — filter jurusan dropdown | ✅ Selesai |
+| GAP-001 | Enrollment Dosen: foto preview (fotoPreview endpoint + grid 5 foto di UI) | ✅ Selesai |
+| GAP-002 | Enrollment Mahasiswa: halaman self-status.tsx + selfStatusPage + selfFotoPreview | ✅ Selesai |
+| GAP-003 | MasterDataSeeder: window_dosen_menit sudah include di ARCH-004 | ✅ Selesai |
+| PROFILE-001 | ProfileController.update() sync nama/email ke AdminJurusan/Dosen/Mahasiswa | ✅ Selesai |
+
+### Catatan Teknis Batch 3
+
+**ARCH-001 Migrations:**
+- `admin_jurusan` table: user_id FK (cascade), jurusan_id FK (cascade), nama, email unique, no_hp
+- `mahasiswa.email` nullable unique kolom baru
+- `users.jurusan_id` DIHAPUS — tidak lagi ada FK langsung
+
+**ARCH-002 User Model — Accessor `getJurusanIdAttribute()`:**
+- `isAdminJurusan()` → return `$this->adminJurusan?->jurusan_id`
+- `isDosen()` → return `$this->dosen?->jurusan_id`
+- Semua controller yang akses `$user->jurusan_id` otomatis resolve tanpa perubahan
+- `HandleInertiaRequests::share()` eager-load `adminJurusan`, `dosen`, `mahasiswa` agar accessor bekerja
+
+**ARCH-004 Login Akun Demo Baru:**
+- `superadmin@demo.id` → Super Admin
+- `admin.ti@demo.id` → Admin Jurusan TI
+- `admin.te@demo.id` → Admin Jurusan TE
+- `mahasiswa@demo.id` → Ahmad Fauzi (1A TI)
+- `budi.santoso@demo.id` → Dosen TI
+- Semua password: `Password@123`
+
+**Build Result:** 3423 modules, 0 errors, 32 detik
+
+---
+
 ## Cara Lanjut di Sesi Baru
 1. Baca file ini untuk tahu posisi progress
-2. Semua task sudah selesai — sistem absensi dosen lengkap
-3. Untuk testing: login `dosen@demo.id` / `Password@123` → dashboard dosen → enrollment wajah
+2. **Semua task TASK_LIST_BATCH3.md selesai**
+3. Untuk testing fresh: `php artisan migrate:fresh --seed`
+4. Login akun baru: `admin.ti@demo.id` (hanya lihat data TI), `admin.te@demo.id` (hanya lihat data TE)
+5. Test fitur baru: Admin Jurusan CRUD, Kelas → tombol mahasiswa, Mahasiswa filter kelas, Enrollment dosen foto preview, Mahasiswa status enrollment page

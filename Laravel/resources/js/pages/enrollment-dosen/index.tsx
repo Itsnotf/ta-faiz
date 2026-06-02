@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -14,8 +15,11 @@ interface EnrollmentStatus {
     semua_jarak_lulus: boolean;
 }
 
+interface FotoPreview { index: number; url: string }
+
 interface Props {
     status: EnrollmentStatus;
+    foto_previews: FotoPreview[];
     flash?: { success?: string; error?: string };
 }
 
@@ -27,7 +31,7 @@ const statusConfig = {
     aktif:              { label: 'Enrollment Aktif', className: 'bg-green-100 text-green-800 border-green-200' },
 } as const;
 
-export default function EnrollmentDosenIndex({ status, flash }: Props) {
+export default function EnrollmentDosenIndex({ status, foto_previews, flash }: Props) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const uploadForm = useForm<{ foto: File[] }>({ foto: [] });
     const [shownMessages] = useState(new Set<string>());
@@ -168,6 +172,28 @@ export default function EnrollmentDosenIndex({ status, flash }: Props) {
                             <p className="text-sm text-green-700">Absensi wajah Anda sudah aktif.</p>
                         </div>
                     </div>
+                )}
+
+                {/* Foto Preview */}
+                {foto_previews.length > 0 && (
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Foto Wajah Terdaftar ({foto_previews.length}/5)</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-5 gap-2">
+                                {foto_previews.map(f => (
+                                    <div key={f.index} className="aspect-square rounded-lg overflow-hidden border bg-muted">
+                                        <img src={f.url} alt={`Foto ${f.index + 1}`}
+                                            className="w-full h-full object-cover" />
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-3">
+                                Jika foto tidak sesuai dengan wajah Anda saat ini, reset enrollment dan ulangi.
+                            </p>
+                        </CardContent>
+                    </Card>
                 )}
 
                 {/* Tombol Reset */}

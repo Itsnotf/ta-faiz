@@ -17,6 +17,11 @@ class StoreMahasiswaRequest extends FormRequest
             'kelas_id' => ['required', 'exists:kelas,id'],
             'nim'      => ['required', 'string', 'max:50', 'unique:mahasiswa,nim'],
             'nama'     => ['required', 'string', 'max:255'],
+            'email'    => [
+                'required', 'email', 'max:255',
+                'unique:mahasiswa,email',
+                'unique:users,email',
+            ],
         ];
     }
 }

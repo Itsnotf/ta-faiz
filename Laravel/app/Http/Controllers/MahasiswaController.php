@@ -29,10 +29,15 @@ class MahasiswaController extends Controller implements HasMiddleware
         $user = $request->user();
 
         return inertia('mahasiswa/index', [
-            'mahasiswa' => $this->mahasiswaService->index($request->search, $user->jurusan_id, $user->isSuperAdmin()),
-            'kelas'     => $this->mahasiswaService->getKelasOptions($user->jurusan_id, $user->isSuperAdmin()),
-            'filters'   => $request->only('search'),
-            'flash'     => ['success' => session('success')],
+            'mahasiswa' => $this->mahasiswaService->index(
+                $request->search,
+                $request->kelas_id,
+                $user->jurusan_id,
+                $user->isSuperAdmin()
+            ),
+            'kelas'   => $this->mahasiswaService->getKelasOptions($user->jurusan_id, $user->isSuperAdmin()),
+            'filters' => $request->only('search', 'kelas_id'),
+            'flash'   => ['success' => session('success')],
         ]);
     }
 

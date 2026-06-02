@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AbsensiController;
+use App\Http\Controllers\AdminJurusanController;
 use App\Http\Controllers\KeteranganController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\DashboardController;
@@ -33,11 +34,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('users', UserController::class);
     Route::resource('roles', RoleController::class);
 
+    // Admin Jurusan Management (hanya super_admin via permission users index/create/etc)
+    Route::resource('admin-jurusan', AdminJurusanController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('auth');
+
     Route::resource('institusi', InstitusiController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('jurusan', JurusanController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('prodi', ProdiController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('ruangan', RuanganController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('kelas', KelasController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['kelas' => 'kelas']);
+    Route::get('kelas/{kelas}/mahasiswa', [KelasController::class, 'mahasiswaList'])
+        ->name('kelas.mahasiswa')
+        ->middleware('permission:kelas index');
     Route::resource('dosen', DosenController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('mahasiswa', MahasiswaController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('jadwal', JadwalController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -67,6 +76,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/enrollment/self-upload', [EnrollmentController::class, 'selfUpload'])->name('enrollment.self-upload.store');
     Route::get('/enrollment/self-verify', [EnrollmentController::class, 'selfVerifyPage'])->name('enrollment.self-verify');
     Route::post('/enrollment/self-verify/frame', [EnrollmentController::class, 'selfVerifyFrame'])->name('enrollment.self-verify.frame');
+    Route::get('/enrollment/self-status', [EnrollmentController::class, 'selfStatusPage'])->name('enrollment.self-status');
+    Route::get('/enrollment/self-foto/{index}', [EnrollmentController::class, 'selfFotoPreview'])->name('enrollment.self-foto-preview');
 
     Route::prefix('enrollment')->name('enrollment.')->middleware('can:enrollment index')->group(function () {
         Route::get('/', [EnrollmentController::class, 'index'])->name('index');
@@ -86,6 +97,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/verify-frame', [EnrollmentDosenController::class, 'verifyFrame'])->name('verify-frame');
         Route::delete('/reset', [EnrollmentDosenController::class, 'reset'])->name('reset');
         Route::get('/status', [EnrollmentDosenController::class, 'status'])->name('status');
+        Route::get('/foto/{index}', [EnrollmentDosenController::class, 'fotoPreview'])->name('foto-preview');
     });
 
     // Koreksi Absensi Dosen (dosen submit)

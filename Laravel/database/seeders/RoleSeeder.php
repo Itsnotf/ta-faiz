@@ -18,13 +18,19 @@ class RoleSeeder extends Seeder
         Role::findByName('super_admin')
             ->syncPermissions(Permission::all());
 
-        // admin_jurusan: semua kecuali institusi management, user/role management, dan permission khusus dosen/mahasiswa
+        // admin_jurusan: semua KECUALI yang di-exclude
         Role::findByName('admin_jurusan')
             ->syncPermissions(Permission::whereNotIn('name', [
+                // Institusi — hanya super admin
                 'institusi index', 'institusi edit',
+                // Jurusan — hanya super admin (admin jurusan sudah tahu jurusannya)
+                'jurusan index', 'jurusan create', 'jurusan edit', 'jurusan delete',
+                // User & Role management — hanya super admin
                 'users index', 'users create', 'users edit', 'users delete',
                 'roles index', 'roles create', 'roles edit', 'roles delete',
+                // Keterangan create — hanya mahasiswa
                 'keterangan create',
+                // Fitur khusus dosen
                 'enrollment_dosen index', 'koreksi_dosen create',
             ])->get());
 

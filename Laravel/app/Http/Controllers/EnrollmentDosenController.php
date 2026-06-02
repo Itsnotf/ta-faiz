@@ -14,9 +14,32 @@ class EnrollmentDosenController extends Controller
         $dosen = $request->user()->dosen;
         if (!$dosen) abort(404);
 
+        $fotoPreviews = [];
+        if ($dosen->foto_paths) {
+            foreach ($dosen->foto_paths as $i => $path) {
+                $fotoPreviews[] = [
+                    'index' => $i,
+                    'url'   => route('enrollment-dosen.foto-preview', ['index' => $i]),
+                ];
+            }
+        }
+
         return inertia('enrollment-dosen/index', [
-            'status' => $this->service->status($dosen),
+            'status'        => $this->service->status($dosen),
+            'foto_previews' => $fotoPreviews,
         ]);
+    }
+
+    public function fotoPreview(Request $request, int $index)
+    {
+        $dosen = $request->user()->dosen;
+        if (!$dosen) abort(404);
+
+        abort_unless($dosen->foto_paths && isset($dosen->foto_paths[$index]), 404);
+        $path = $dosen->foto_paths[$index];
+        abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($path), 404);
+
+        return \Illuminate\Support\Facades\Storage::disk('local')->response($path);
     }
 
     public function uploadFoto(Request $request)

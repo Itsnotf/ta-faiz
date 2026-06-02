@@ -40,6 +40,12 @@ const userManagement: NavItem[] = [
         icon: KeyIcon,
         permissions: ['roles index'],
     },
+    {
+        title: 'Admin Jurusan',
+        href: '/admin-jurusan',
+        icon: ShieldCheck,
+        permissions: ['users index'],
+    },
 ];
 
 const masterDataItems: NavItem[] = [
@@ -136,6 +142,12 @@ const keteranganItems: NavItem[] = [
         href: '/keterangan/admin',
         icon: ClipboardList,
         permissions: ['keterangan approve'],
+    },
+    {
+        title: 'Status Enrollment',
+        href: '/enrollment/self-status',
+        icon: ScanFace,
+        roles: ['mahasiswa'],
     },
 ];
 

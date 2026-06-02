@@ -29,9 +29,14 @@ class RuanganController extends Controller implements HasMiddleware
         $user = $request->user();
 
         return inertia('ruangan/index', [
-            'ruangan' => $this->ruanganService->index($request->search, $user->jurusan_id, $user->isSuperAdmin()),
+            'ruangan' => $this->ruanganService->index(
+                $request->search,
+                $request->jurusan_id,
+                $user->jurusan_id,
+                $user->isSuperAdmin()
+            ),
             'jurusan' => $this->ruanganService->getJurusanOptions($user->jurusan_id, $user->isSuperAdmin()),
-            'filters' => $request->only('search'),
+            'filters' => $request->only('search', 'jurusan_id'),
             'flash'   => ['success' => session('success')],
         ]);
     }

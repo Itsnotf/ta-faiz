@@ -2,6 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\AdminJurusan;
+use App\Models\Institusi;
+use App\Models\Jurusan;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -9,72 +12,78 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
+        // ── 1. Super Admin ─────────────────────────────────────────────────
         $superAdmin = User::firstOrCreate(
             ['email' => 'superadmin@demo.id'],
             [
-                'name' => 'Super Admin',
-                'password' => 'Password@123',
-                'email_verified_at' => now(),
-            ]
-        );
-        $superAdmin->assignRole('super_admin');
-
-        $adminJurusan = User::firstOrCreate(
-            ['email' => 'admin@demo.id'],
-            [
-                'name' => 'Admin Jurusan',
-                'password' => 'Password@123',
-                'email_verified_at' => now(),
-            ]
-        );
-        $adminJurusan->assignRole('admin_jurusan');
-
-        $mahasiswa = User::firstOrCreate(
-            ['email' => 'mahasiswa@demo.id'],
-            [
-                'name' => 'Mahasiswa Demo',
-                'password' => 'Password@123',
-                'email_verified_at' => now(),
-            ]
-        );
-        $mahasiswa->assignRole('mahasiswa');
-
-        $dosenUser = User::firstOrCreate(
-            ['email' => 'dosen@demo.id'],
-            [
-                'name'              => 'Dr. Budi Santoso',
+                'name'              => 'Super Admin',
                 'password'          => 'Password@123',
                 'email_verified_at' => now(),
             ]
         );
-        $dosenUser->assignRole('dosen');
+        $superAdmin->syncRoles('super_admin');
 
-        // Ambil atau buat jurusan demo jika belum ada
-        $jurusan = \App\Models\Jurusan::first();
-        if (!$jurusan) {
-            $institusi = \App\Models\Institusi::firstOrCreate(
-                ['nama' => 'Politeknik Demo'],
-                ['kode' => 'POLI-DEMO', 'alamat' => '-']
-            );
-            $jurusan = \App\Models\Jurusan::firstOrCreate(
-                ['kode' => 'TI-DEMO'],
-                ['institusi_id' => $institusi->id, 'nama' => 'Teknik Informatika']
-            );
-        }
+        // ── 2. Institusi & Jurusan dummy (dibutuhkan UserSeeder) ───────────
+        $institusi = Institusi::firstOrCreate(
+            ['nama' => 'Politeknik Negeri Demo'],
+            ['alamat' => 'Jl. Pendidikan No. 1, Palembang']
+        );
 
-        $dosenRecord = \App\Models\Dosen::firstOrCreate(
-            ['nip' => '198001012010011001'],
+        $jurusanTI = Jurusan::firstOrCreate(
+            ['kode' => 'TI'],
+            ['institusi_id' => $institusi->id, 'nama' => 'Teknik Informatika']
+        );
+
+        $jurusanTE = Jurusan::firstOrCreate(
+            ['kode' => 'TE'],
+            ['institusi_id' => $institusi->id, 'nama' => 'Teknik Elektronika']
+        );
+
+        // ── 3. Admin Jurusan TI ────────────────────────────────────────────
+        $adminTIUser = User::firstOrCreate(
+            ['email' => 'admin.ti@demo.id'],
             [
-                'user_id'    => $dosenUser->id,
-                'jurusan_id' => $jurusan->id,
-                'nama'       => 'Dr. Budi Santoso',
-                'email'      => 'dosen@demo.id',
+                'name'              => 'Admin Jurusan TI',
+                'password'          => 'Password@123',
+                'email_verified_at' => now(),
+            ]
+        );
+        $adminTIUser->syncRoles('admin_jurusan');
+
+        AdminJurusan::firstOrCreate(
+            ['user_id' => $adminTIUser->id],
+            [
+                'jurusan_id' => $jurusanTI->id,
+                'nama'       => 'Admin Jurusan TI',
+                'email'      => 'admin.ti@demo.id',
+                'no_hp'      => '081234567890',
             ]
         );
 
-        // Pastikan user_id ter-link jika record sudah ada tapi user_id masih null
-        if (!$dosenRecord->user_id) {
-            $dosenRecord->update(['user_id' => $dosenUser->id]);
-        }
+        // ── 4. Admin Jurusan TE ────────────────────────────────────────────
+        $adminTEUser = User::firstOrCreate(
+            ['email' => 'admin.te@demo.id'],
+            [
+                'name'              => 'Admin Jurusan TE',
+                'password'          => 'Password@123',
+                'email_verified_at' => now(),
+            ]
+        );
+        $adminTEUser->syncRoles('admin_jurusan');
+
+        AdminJurusan::firstOrCreate(
+            ['user_id' => $adminTEUser->id],
+            [
+                'jurusan_id' => $jurusanTE->id,
+                'nama'       => 'Admin Jurusan TE',
+                'email'      => 'admin.te@demo.id',
+                'no_hp'      => '081234567891',
+            ]
+        );
+
+        $this->command->info('✅ UserSeeder selesai:');
+        $this->command->info('   superadmin@demo.id / Password@123  → Super Admin');
+        $this->command->info('   admin.ti@demo.id / Password@123   → Admin Jurusan TI');
+        $this->command->info('   admin.te@demo.id / Password@123   → Admin Jurusan TE');
     }
 }

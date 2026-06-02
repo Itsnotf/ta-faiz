@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -13,26 +11,14 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'jurusan_id',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'two_factor_secret',
@@ -40,28 +26,20 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'email_verified_at'       => 'datetime',
+            'password'                => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
     }
 
-    public function getUserPermissions()
-    {
-        return $this->getAllPermissions()->mapWithKeys(fn($permission) => [$permission['name'] => true]);
-    }
+    // ── Relasi ─────────────────────────────────────────────────────────────
 
-    public function jurusan(): BelongsTo
+    public function adminJurusan(): HasOne
     {
-        return $this->belongsTo(Jurusan::class);
+        return $this->hasOne(AdminJurusan::class);
     }
 
     public function mahasiswa(): HasOne
@@ -72,6 +50,28 @@ class User extends Authenticatable
     public function dosen(): HasOne
     {
         return $this->hasOne(Dosen::class);
+    }
+
+    // ── Accessor: jurusan_id (dipakai semua controller tanpa perlu diubah) ─
+
+    public function getJurusanIdAttribute(): ?int
+    {
+        if ($this->isAdminJurusan()) {
+            return $this->adminJurusan?->jurusan_id;
+        }
+
+        if ($this->isDosen()) {
+            return $this->dosen?->jurusan_id;
+        }
+
+        return null;
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
+    public function getUserPermissions()
+    {
+        return $this->getAllPermissions()->mapWithKeys(fn($permission) => [$permission['name'] => true]);
     }
 
     public function isSuperAdmin(): bool

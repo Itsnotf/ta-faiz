@@ -17,7 +17,7 @@ class KelasController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:kelas index',  only: ['index']),
+            new Middleware('permission:kelas index',  only: ['index', 'mahasiswaList']),
             new Middleware('permission:kelas create', only: ['store']),
             new Middleware('permission:kelas edit',   only: ['update']),
             new Middleware('permission:kelas delete', only: ['destroy']),
@@ -29,9 +29,14 @@ class KelasController extends Controller implements HasMiddleware
         $user = $request->user();
 
         return inertia('kelas/index', [
-            'kelas'   => $this->kelasService->index($request->search, $user->jurusan_id, $user->isSuperAdmin()),
+            'kelas'   => $this->kelasService->index(
+                $request->search,
+                $request->angkatan,
+                $user->jurusan_id,
+                $user->isSuperAdmin()
+            ),
             'prodi'   => $this->kelasService->getProdiOptions($user->jurusan_id, $user->isSuperAdmin()),
-            'filters' => $request->only('search'),
+            'filters' => $request->only('search', 'angkatan'),
             'flash'   => ['success' => session('success')],
         ]);
     }
@@ -52,5 +57,15 @@ class KelasController extends Controller implements HasMiddleware
     {
         $this->kelasService->destroy($kelas);
         return back()->with('success', 'Kelas berhasil dihapus.');
+    }
+
+    public function mahasiswaList(Kelas $kelas)
+    {
+        $kelas->load(['prodi.jurusan', 'mahasiswa' => fn($q) => $q->orderBy('nama')]);
+
+        return inertia('kelas/mahasiswa-list', [
+            'kelas'     => $kelas,
+            'mahasiswa' => $kelas->mahasiswa,
+        ]);
     }
 }

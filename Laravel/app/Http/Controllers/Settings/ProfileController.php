@@ -29,13 +29,36 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $user->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $user->save();
+
+        // Sync nama & email ke tabel role-specific
+        if ($user->isAdminJurusan() && $user->adminJurusan) {
+            $user->adminJurusan->update([
+                'nama'  => $request->name,
+                'email' => $request->email,
+            ]);
+        }
+
+        if ($user->isDosen() && $user->dosen) {
+            $user->dosen->update([
+                'nama'  => $request->name,
+                'email' => $request->email,
+            ]);
+        }
+
+        if ($user->isMahasiswa() && $user->mahasiswa) {
+            $user->mahasiswa->update([
+                'nama'  => $request->name,
+                'email' => $request->email,
+            ]);
+        }
 
         return to_route('profile.edit');
     }

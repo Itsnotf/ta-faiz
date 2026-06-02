@@ -6,17 +6,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import hasAnyPermission from '@/lib/utils';
-import { type BreadcrumbItem, type Kelas, type Prodi } from '@/types';
+import { type BreadcrumbItem, type Prodi } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Pencil, PlusCircle } from 'lucide-react';
+import { Pencil, PlusCircle, Users } from 'lucide-react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+interface KelasItem {
+    id: number; nama: string; angkatan: number;
+    prodi_id: number;
+    prodi?: { id: number; nama: string; jurusan?: { nama: string } };
+    mahasiswa_count: number;
+}
+
 interface Props {
-    kelas: { data: Kelas[]; links: any[] };
+    kelas: { data: KelasItem[]; links: any[] };
     prodi: Prodi[];
-    filters: { search?: string };
+    filters: { search?: string; angkatan?: string };
     flash?: { success?: string };
 }
 
@@ -29,7 +36,7 @@ export default function KelasPage({ kelas, prodi, filters, flash }: Props) {
     const [search, setSearch] = useState(filters.search ?? '');
     const [openCreate, setOpenCreate] = useState(false);
     const [openEdit, setOpenEdit] = useState(false);
-    const [editTarget, setEditTarget] = useState<Kelas | null>(null);
+    const [editTarget, setEditTarget] = useState<KelasItem | null>(null);
     const [shownMessages] = useState(new Set<string>());
 
     useEffect(() => {
@@ -42,7 +49,7 @@ export default function KelasPage({ kelas, prodi, filters, flash }: Props) {
     const createForm = useForm({ prodi_id: '', nama: '', angkatan: String(currentYear) });
     const editForm = useForm({ prodi_id: '', nama: '', angkatan: '', _method: 'PUT' });
 
-    function openEditDialog(item: Kelas) {
+    function openEditDialog(item: KelasItem) {
         setEditTarget(item);
         editForm.setData({ prodi_id: String(item.prodi_id), nama: item.nama, angkatan: String(item.angkatan), _method: 'PUT' });
         setOpenEdit(true);
@@ -97,11 +104,28 @@ export default function KelasPage({ kelas, prodi, filters, flash }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Kelas" />
             <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between gap-2">
-                    <form onSubmit={e => { e.preventDefault(); router.get('/kelas', { search }, { preserveState: true }); }} className="flex gap-2 w-full max-w-xs">
-                        <Input placeholder="Cari kelas..." value={search} onChange={e => setSearch(e.target.value)} />
-                        <Button variant="outline" type="submit">Cari</Button>
-                    </form>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap">
+                        <form onSubmit={e => { e.preventDefault(); router.get('/kelas', { search, angkatan: filters.angkatan }, { preserveState: true }); }} className="flex gap-2">
+                            <Input placeholder="Cari kelas..." value={search} onChange={e => setSearch(e.target.value)} className="w-48" />
+                            <Button variant="outline" type="submit">Cari</Button>
+                        </form>
+                        <Select value={filters.angkatan ?? ''}
+                            onValueChange={val => {
+                                const p = val && val !== 'all' ? { angkatan: val } : {};
+                                router.get('/kelas', { ...filters, ...p }, { preserveState: true });
+                            }}>
+                            <SelectTrigger className="w-40">
+                                <SelectValue placeholder="Semua Angkatan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Angkatan</SelectItem>
+                                {years.map(y => (
+                                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     {hasAnyPermission(['kelas create']) && (
                         <Button onClick={() => setOpenCreate(true)}><PlusCircle className="mr-2 size-4" /> Tambah</Button>
                     )}
@@ -114,18 +138,26 @@ export default function KelasPage({ kelas, prodi, filters, flash }: Props) {
                             <TableHead>Angkatan</TableHead>
                             <TableHead>Prodi</TableHead>
                             <TableHead>Jurusan</TableHead>
+                            <TableHead className="text-center">Mahasiswa</TableHead>
                             <TableHead className="w-28">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {kelas.data.length === 0 ? (
-                            <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-10">Belum ada data kelas.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">Belum ada data kelas.</TableCell></TableRow>
                         ) : kelas.data.map(item => (
                             <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.nama}</TableCell>
                                 <TableCell>{item.angkatan}</TableCell>
                                 <TableCell className="text-sm">{item.prodi?.nama ?? '-'}</TableCell>
                                 <TableCell className="text-muted-foreground text-sm">{item.prodi?.jurusan?.nama ?? '-'}</TableCell>
+                                <TableCell className="text-center">
+                                    <Button size="sm" variant="outline"
+                                        onClick={() => router.get(`/kelas/${item.id}/mahasiswa`)}>
+                                        <Users className="size-3.5 mr-1" />
+                                        {item.mahasiswa_count}
+                                    </Button>
+                                </TableCell>
                                 <TableCell className="flex gap-1">
                                     {hasAnyPermission(['kelas edit']) && (
                                         <Button variant="outline" size="sm" onClick={() => openEditDialog(item)}><Pencil className="size-3.5" /></Button>
