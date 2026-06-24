@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AbsensiDosen;
 use App\Models\AbsensiMahasiswa;
+use App\Models\AttendanceEvent;
 use App\Models\Dosen;
 use App\Models\Jadwal;
 use App\Models\Mahasiswa;
@@ -12,6 +13,7 @@ use App\Models\SesiAbsensi;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class InternalController extends Controller
 {
@@ -122,34 +124,64 @@ class InternalController extends Controller
             ->first();
 
         if (!$sesi) {
+            $this->logEvent($request, null, null, 'rejected', 'sesi_not_found');
             return response()->json(['status' => 'sesi_not_found'], 404);
         }
 
-        // Cek window waktu hadir (dosen pakai window_dosen_menit, mahasiswa pakai window_menit)
+        // Re-validasi confidence di Laravel — jangan percaya angka dari Python begitu saja.
+        $threshold = (float) config('services.python.absensi_threshold', 0.65);
+        if ($request->confidence < $threshold) {
+            $this->logEvent($request, $sesi->id, null, 'rejected', 'low_confidence');
+            return response()->json(['status' => 'low_confidence']);
+        }
+
+        // Event harus berasal dari ruangan yang sesuai jadwal sesi ini.
+        if ((int) $request->ruangan_id !== (int) $sesi->jadwal->ruangan_id) {
+            $this->logEvent($request, $sesi->id, null, 'rejected', 'wrong_room');
+            return response()->json(['status' => 'wrong_room'], 403);
+        }
+
         $windowMenit = $request->type === 'dosen'
             ? $sesi->jadwal->window_dosen_menit
             : $sesi->jadwal->window_menit;
         $batasWindow = Carbon::parse($sesi->mulai_at)->addMinutes($windowMenit);
         if (now()->isAfter($batasWindow)) {
+            $this->logEvent($request, $sesi->id, null, 'rejected', 'out_of_window');
             return response()->json(['status' => 'out_of_window']);
         }
 
-        if ($request->type === 'mahasiswa') {
-            $mhs = Mahasiswa::where('nim', $request->nim_or_nip)->first();
-            if (!$mhs) return response()->json(['status' => 'not_found'], 404);
+        return $request->type === 'mahasiswa'
+            ? $this->recordMahasiswa($request, $sesi)
+            : $this->recordDosen($request, $sesi);
+    }
 
-            // Verifikasi mahasiswa terdaftar di kelas yang sesuai dengan sesi ini
-            if ($mhs->kelas_id !== $sesi->jadwal->kelas_id) {
-                return response()->json(['status' => 'not_in_class'], 403);
-            }
+    private function recordMahasiswa(Request $request, SesiAbsensi $sesi): JsonResponse
+    {
+        $mhs = Mahasiswa::where('nim', $request->nim_or_nip)->first();
+        if (!$mhs) {
+            $this->logEvent($request, $sesi->id, null, 'rejected', 'not_found');
+            return response()->json(['status' => 'not_found'], 404);
+        }
 
-            // Cek duplikat
-            $exists = AbsensiMahasiswa::where('sesi_id', $sesi->id)
+        if ($mhs->kelas_id !== $sesi->jadwal->kelas_id) {
+            $this->logEvent($request, $sesi->id, $mhs->id, 'rejected', 'not_in_class');
+            return response()->json(['status' => 'not_in_class'], 403);
+        }
+
+        // Jangan andalkan Python saja soal status enrollment — cek ulang di backend.
+        if ($mhs->status_akun !== 'aktif') {
+            $this->logEvent($request, $sesi->id, $mhs->id, 'rejected', 'enrollment_not_verified');
+            return response()->json(['status' => 'enrollment_not_verified'], 403);
+        }
+
+        return DB::transaction(function () use ($request, $sesi, $mhs) {
+            $existing = AbsensiMahasiswa::where('sesi_id', $sesi->id)
                 ->where('mahasiswa_id', $mhs->id)
-                ->where('status', 'hadir')
-                ->exists();
+                ->lockForUpdate()
+                ->first();
 
-            if ($exists) {
+            if ($existing && $existing->status === 'hadir') {
+                $this->logEvent($request, $sesi->id, $mhs->id, 'rejected', 'duplicate');
                 return response()->json(['status' => 'duplicate'], 409);
             }
 
@@ -158,18 +190,33 @@ class InternalController extends Controller
                 ['status' => 'hadir', 'hadir_at' => now(), 'confidence' => $request->confidence]
             );
 
+            $this->logEvent($request, $sesi->id, $mhs->id, 'accepted', null);
+
             return response()->json(['status' => 'recorded', 'nama' => $mhs->nama, 'is_duplicate' => false]);
+        });
+    }
 
-        } else {
-            $dsn = Dosen::where('nip', $request->nim_or_nip)->first();
-            if (!$dsn) return response()->json(['status' => 'not_found'], 404);
+    private function recordDosen(Request $request, SesiAbsensi $sesi): JsonResponse
+    {
+        $dsn = Dosen::where('nip', $request->nim_or_nip)->first();
+        if (!$dsn) {
+            $this->logEvent($request, $sesi->id, null, 'rejected', 'not_found');
+            return response()->json(['status' => 'not_found'], 404);
+        }
 
-            $exists = AbsensiDosen::where('sesi_id', $sesi->id)
+        if ($dsn->status_enrollment !== 'aktif') {
+            $this->logEvent($request, $sesi->id, $dsn->id, 'rejected', 'enrollment_not_verified');
+            return response()->json(['status' => 'enrollment_not_verified'], 403);
+        }
+
+        return DB::transaction(function () use ($request, $sesi, $dsn) {
+            $existing = AbsensiDosen::where('sesi_id', $sesi->id)
                 ->where('dosen_id', $dsn->id)
-                ->where('status', 'hadir')
-                ->exists();
+                ->lockForUpdate()
+                ->first();
 
-            if ($exists) {
+            if ($existing && $existing->status === 'hadir') {
+                $this->logEvent($request, $sesi->id, $dsn->id, 'rejected', 'duplicate');
                 return response()->json(['status' => 'duplicate'], 409);
             }
 
@@ -178,7 +225,24 @@ class InternalController extends Controller
                 ['status' => 'hadir', 'hadir_at' => now(), 'confidence' => $request->confidence]
             );
 
+            $this->logEvent($request, $sesi->id, $dsn->id, 'accepted', null);
+
             return response()->json(['status' => 'recorded', 'nama' => $dsn->nama, 'is_duplicate' => false]);
-        }
+        });
+    }
+
+    private function logEvent(Request $request, ?int $sesiId, ?int $personId, string $decision, ?string $reason): void
+    {
+        AttendanceEvent::create([
+            'sesi_id'             => $sesiId,
+            'person_type'         => $request->type,
+            'person_id'           => $personId,
+            'nim_or_nip_raw'      => $request->nim_or_nip,
+            'ruangan_id_reported' => $request->ruangan_id,
+            'confidence'          => $request->confidence,
+            'decision'            => $decision,
+            'reject_reason'       => $reason,
+            'detected_at'         => now(),
+        ]);
     }
 }

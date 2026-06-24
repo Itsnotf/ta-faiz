@@ -148,7 +148,7 @@ export default function SelfVerifyPage({ mahasiswa, jarak_lulus }: Props) {
                                 )}
                                                 {h.confidence !== null && (
                                     <p className={`text-xs font-mono ${h.lulus ? 'text-green-600' : 'text-muted-foreground'}`}>
-                                        {(h.confidence * 100).toFixed(1)}% / min 75%
+                                        {(h.confidence * 100).toFixed(1)}% / min 60%
                                     </p>
                                 )}
 
@@ -171,7 +171,7 @@ export default function SelfVerifyPage({ mahasiswa, jarak_lulus }: Props) {
                     <div className="rounded-xl border border-green-200 bg-green-50 p-4">
                         <p className="font-semibold text-green-800">Semua jarak berhasil diverifikasi!</p>
                         <p className="text-sm text-green-700 mt-1">
-                            Verifikasi wajah Anda selesai. Menunggu persetujuan admin untuk mengaktifkan akun.
+                            Verifikasi wajah Anda selesai.
                         </p>
                     </div>
                 )}

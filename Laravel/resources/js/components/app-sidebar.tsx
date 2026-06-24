@@ -101,7 +101,7 @@ const masterDataItems: NavItem[] = [
 
 const enrollmentItems: NavItem[] = [
     {
-        title: 'Enrollment Mahasiswa',
+        title: 'Enrollment Wajah',
         href: '/enrollment',
         icon: ScanFace,
         permissions: ['enrollment index'],
@@ -152,13 +152,13 @@ const keteranganItems: NavItem[] = [
 ];
 
 const dosenItems: NavItem[] = [
-    {
-        title: 'Enrollment Wajah',
-        href: '/enrollment-dosen',
-        icon: ScanFace,
-        permissions: ['enrollment_dosen index'],
-        roles: ['dosen'],
-    },
+    // {
+    //     title: 'Enrollment Wajah',
+    //     href: '/enrollment-dosen',
+    //     icon: ScanFace,
+    //     permissions: ['enrollment_dosen index'],
+    //     roles: ['dosen'],
+    // },
     {
         title: 'Koreksi Absensi',
         href: '/koreksi-dosen',

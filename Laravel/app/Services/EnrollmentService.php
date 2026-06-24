@@ -17,7 +17,7 @@ class EnrollmentService
     public function __construct()
     {
         $this->pythonUrl            = config('services.python.url', 'http://localhost:8001');
-        $this->enrollmentThreshold  = (float) config('services.python.enrollment_threshold', 0.75);
+        $this->enrollmentThreshold  = (float) config('services.python.enrollment_threshold', 0.60);
     }
 
     public function uploadFoto(Mahasiswa $mhs, array $files): void

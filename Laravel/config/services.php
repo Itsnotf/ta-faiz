@@ -37,7 +37,8 @@ return [
 
     'python' => [
         'url'                         => env('PYTHON_SERVICE_URL', 'http://localhost:8001'),
-        'enrollment_threshold'        => (float) env('ENROLLMENT_CONFIDENCE_THRESHOLD', 0.75),
+        'enrollment_threshold'        => (float) env('ENROLLMENT_CONFIDENCE_THRESHOLD', 0.60),
+        'absensi_threshold'           => (float) env('ABSENSI_CONFIDENCE_THRESHOLD', 0.65),
     ],
 
 ];
