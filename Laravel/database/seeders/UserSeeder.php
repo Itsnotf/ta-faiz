@@ -17,7 +17,7 @@ class UserSeeder extends Seeder
             ['email' => 'superadmin@demo.id'],
             [
                 'name'              => 'Super Admin',
-                'password'          => 'Password@123',
+                'password'          => 'password',
                 'email_verified_at' => now(),
             ]
         );
@@ -44,7 +44,7 @@ class UserSeeder extends Seeder
             ['email' => 'admin.ti@demo.id'],
             [
                 'name'              => 'Admin Jurusan TI',
-                'password'          => 'Password@123',
+                'password'          => 'password',
                 'email_verified_at' => now(),
             ]
         );
@@ -65,7 +65,7 @@ class UserSeeder extends Seeder
             ['email' => 'admin.te@demo.id'],
             [
                 'name'              => 'Admin Jurusan TE',
-                'password'          => 'Password@123',
+                'password'          => 'password',
                 'email_verified_at' => now(),
             ]
         );
@@ -82,8 +82,8 @@ class UserSeeder extends Seeder
         );
 
         $this->command->info('✅ UserSeeder selesai:');
-        $this->command->info('   superadmin@demo.id / Password@123  → Super Admin');
-        $this->command->info('   admin.ti@demo.id / Password@123   → Admin Jurusan TI');
-        $this->command->info('   admin.te@demo.id / Password@123   → Admin Jurusan TE');
+        $this->command->info('   superadmin@demo.id / password  → Super Admin');
+        $this->command->info('   admin.ti@demo.id / password   → Admin Jurusan TI');
+        $this->command->info('   admin.te@demo.id / password   → Admin Jurusan TE');
     }
 }
